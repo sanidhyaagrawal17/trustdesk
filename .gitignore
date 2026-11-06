@@ -1,0 +1,15 @@
+# TrustDesk Git Ignore
+.env
+audit.db
+chroma_db/
+*.joblib
+__pycache__/
+*.py[cod]
+*$py.class
+node_modules/
+dist/
+.venv/
+.pytest_cache/
+*.log
+.coverage
+htmlcov/

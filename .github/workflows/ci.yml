@@ -1,0 +1,92 @@
+name: TrustDesk CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trustdesk_user
+          POSTGRES_PASSWORD: trustdesk_pass
+          POSTGRES_DB: trustdesk_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Cache Chroma Embedding Model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/chroma
+          key: ${{ runner.os }}-chroma-${{ hashFiles('backend/tools/faq_tool.py') }}
+          restore-keys: |
+            ${{ runner.os }}-chroma-
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Vocabulary Scrubber
+        run: |
+          python -c "
+          import os, sys
+          forbidden = [''.join(['prod', 'uction']), ''.join(['enter', 'prise']), ''.join(['compli', 'ance'])]
+          violations = []
+          for root, dirs, files in os.walk('.'):
+              if any(ignore in root for ignore in ['.git', '.pytest_cache', '__pycache__', '.venv', 'node_modules']):
+                  continue
+              for file in files:
+                  if file.endswith(('.py', '.yaml', '.yml', '.md', '.txt', '.example', '.ini', '.gitignore')):
+                      with open(os.path.join(root, file), 'r', encoding='utf-8', errors='ignore') as f:
+                          content = f.read().lower()
+                          for term in forbidden:
+                              if term in content:
+                                  violations.append((os.path.join(root, file), term))
+          if violations:
+              print('Forbidden terms detected:', violations)
+              sys.exit(1)
+          print('Zero forbidden words verified!')
+          "
+
+      - name: Run Fast Unit Tests
+        run: |
+          pytest -m "not integration" -v
+
+      - name: Run Live Service Integration Tests
+        env:
+          REQUIRE_INTEGRATION: "1"
+          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql://trustdesk_user:trustdesk_pass@localhost:5432/trustdesk_db
+        run: |
+          pytest -m "integration" -v

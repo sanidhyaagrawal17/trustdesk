@@ -1,0 +1,23 @@
+# TrustDesk Feature Flags and Parameters
+# Synthetic data loan-FAQ assistant - not a regulated banking system.
+
+agent:
+  max_retries: 2
+  timeout_seconds: 5.0
+  deterministic_fallback: true
+  grounding_threshold: 0.35
+
+tools:
+  enable_chromadb_faq: true
+  enable_emi_calculator: true
+  enable_eligibility_checker: true
+  enable_tfidf_fallback: false
+
+security:
+  strict_channel_auth: true
+  input_injection_check: true
+  pii_masking_enabled: true
+
+synthetic_eval:
+  default_mock_llm: true
+  log_trace_ids: true

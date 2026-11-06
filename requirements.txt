@@ -1,0 +1,18 @@
+# Pinned dependencies for TrustDesk
+fastapi==0.162.0
+uvicorn==0.54.0
+sse-starlette==3.5.0
+langgraph==1.2.20
+langchain-core==1.7.6
+chromadb==1.5.9
+scikit-learn==1.9.1
+pyyaml==6.0.3
+pytest==9.2.0
+pytest-asyncio==1.4.1.post1
+httpx==0.28.1
+redis==8.1.0
+sqlalchemy==2.1.8
+pydantic==2.14.1
+numpy==2.4.6
+scipy==1.17.1
+psycopg2-binary==2.9.10
