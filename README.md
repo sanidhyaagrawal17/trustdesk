@@ -241,7 +241,7 @@ A held-out suite of 15 queries evaluated once on the frozen hybrid router withou
 2. **`blind-15-13`**: *"Meri CIBIL score 680 hai, kya iska loan par asar padega?"*
    - **Route**: `fallback` via `rule_fast_path` (`rule_match`) -> **False Refusal**
    - **Root Cause**: The token `score` in the general out-of-scope sports regex (`\b(?:cricket|football|match|score|ipl|game|sports?)\b`) collided with "CIBIL score", causing premature fast-path refusal despite the query being a valid credit score inquiry.
-   - **Future Improvement Only**: Narrow sports regex to require game context (e.g., `(?:match|ipl|game)\s+score`) or add negative lookbehind `(?<!cibil\s)(?<!credit\s)score`.
+   - **Resolution Note**: Fixed after the blind run; blind result unchanged, not re-run. A negative lookbehind `(?<!cibil\s)(?<!credit\s)score` was added to the sports pattern and validated by `test_cibil_credit_score_negative_lookbehind_regression`. The blind benchmark numbers (9/15 pass, 4/15 clarify, 2/15 false refusal, 0/15 misroute) remain the frozen record of the initial evaluation.
 
 ---
 

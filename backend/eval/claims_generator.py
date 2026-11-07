@@ -142,6 +142,13 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
             "test_function": "test_low_confidence_query_returns_clarifying_question",
             "test_module": "tests.test_phase3_eval",
         },
+        {
+            "id": "CLAIM-ROUTER-02",
+            "category": "Agent Routing & Loop",
+            "claim": "Sports out-of-scope pattern uses negative lookbehind to avoid false rejection of CIBIL and credit score inquiries.",
+            "test_function": "test_cibil_credit_score_negative_lookbehind_regression",
+            "test_module": "tests.test_phase3_eval",
+        },
     ]
 
 

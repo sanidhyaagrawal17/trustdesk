@@ -165,3 +165,18 @@ def evaluate_blind_15_on_router(router_func: Callable[[str], Any]) -> Dict[str, 
         "misroute_count": misroute_count,
         "results": results,
     }
+
+
+# Immutable record of the single blind evaluation run executed at commit 3eebf52
+# (held unchanged and not re-run after post-run bug fixes)
+BLIND_15_FROZEN_3EEBF52_RESULTS: Dict[str, Any] = {
+    "frozen_commit": "3eebf52",
+    "total": 15,
+    "pass_count": 9,
+    "clarify_count": 4,
+    "false_refusal_count": 2,
+    "misroute_count": 0,
+    "evaluation_timestamp": "2026-11-07T10:17:58Z",
+    "note": "Fixed CIBIL score regex collision after the blind run; blind result unchanged, not re-run.",
+}
+

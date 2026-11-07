@@ -24,6 +24,7 @@
 | `CLAIM-EVAL-05` | **Evaluation & Grounding** | Hybrid intent router combining rule fast path, classifier probabilities, and Chroma retrieval evaluates 20-query development set with 17 direct matches, 3 clarifying questions, and 0 misrouted. | `test_independent_20_query_evaluation_before_and_after_hybrid_router` |
 | `CLAIM-EVAL-06` | **Evaluation & Grounding** | Blind evaluation suite (N=15, router frozen at 3eebf52) achieves 9 pass, 4 clarify, 2 false refusal, and 0 misroute with zero post-hoc tuning. | `test_blind_15_query_evaluation_frozen_router` |
 | `CLAIM-ROUTER-01` | **Agent Routing & Loop** | Low-confidence queries return interactive clarifying questions rather than outright refusals. | `test_low_confidence_query_returns_clarifying_question` |
+| `CLAIM-ROUTER-02` | **Agent Routing & Loop** | Sports out-of-scope pattern uses negative lookbehind to avoid false rejection of CIBIL and credit score inquiries. | `test_cibil_credit_score_negative_lookbehind_regression` |
 
 ## Non-Claims & Honest Architectural Gaps
 - **No gRPC**: Communications rely strictly on REST and SSE streaming.

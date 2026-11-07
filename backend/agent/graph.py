@@ -45,7 +45,7 @@ def detect_intent_rule_based(query: str) -> str:
         r"\b(?:crypto(?:currency)?|bitcoin|ethereum|stocks?|trading|shares?|investment\s+tips?)\b",
         r"\b(?:joke|jokes|chutkula|riddle|funny|story|poem|song|movie|cinema)\b",
         r"\b(?:python|javascript|script|scrape|scraping|code|coding|software|algorithm|html|css)\b",
-        r"\b(?:cricket|football|match|score|ipl|game|sports?)\b",
+        r"\b(?:cricket|football|match|(?<!cibil\s)(?<!credit\s)score|ipl|game|sports?)\b",
         r"\b(?:capital\s+of|who\s+is|who\s+was|history\s+of|planet|recipe)\b",
     ]
     if any(re.search(pat, q) for pat in out_of_scope_patterns):
@@ -165,7 +165,7 @@ def route_intent_hybrid(query: str) -> tuple[str, float | str, str]:
         r"\b(?:crypto(?:currency)?|bitcoin|ethereum|stocks?|trading|shares?|investment\s+tips?)\b",
         r"\b(?:joke|jokes|chutkula|riddle|funny|story|poem|song|movie|cinema)\b",
         r"\b(?:python|javascript|script|scrape|scraping|coding|algorithm|html|css)\b",
-        r"\b(?:cricket|football|match|score|ipl|game|sports?)\b",
+        r"\b(?:cricket|football|match|(?<!cibil\s)(?<!credit\s)score|ipl|game|sports?)\b",
         r"\b(?:capital\s+of|who\s+is|who\s+was|history\s+of|planet|recipe)\b",
     ]
     if any(re.search(pat, q) for pat in out_of_scope_patterns):

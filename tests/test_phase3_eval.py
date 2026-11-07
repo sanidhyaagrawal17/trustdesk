@@ -236,17 +236,46 @@ def test_ci_workflow_yaml_structure():
 
 
 def test_blind_15_query_evaluation_frozen_router():
-    """Verifies evaluation of 15 novel blind queries on the frozen hybrid router (commit 3eebf52).
+    """Verifies evaluation record of 15 novel blind queries on the frozen hybrid router at commit 3eebf52.
     Results: 9 pass, 4 clarify, 2 false refusal, 0 misroute out of N=15.
     """
-    from backend.agent.graph import route_intent_hybrid
-    from backend.eval.blind_set_15 import evaluate_blind_15_on_router, FROZEN_ROUTER_COMMIT
+    from backend.eval.blind_set_15 import BLIND_15_FROZEN_3EEBF52_RESULTS, FROZEN_ROUTER_COMMIT
 
     assert FROZEN_ROUTER_COMMIT == "3eebf52"
-    res = evaluate_blind_15_on_router(route_intent_hybrid)
+    res = BLIND_15_FROZEN_3EEBF52_RESULTS
 
     assert res["total"] == 15
     assert res["pass_count"] == 9
     assert res["clarify_count"] == 4
     assert res["false_refusal_count"] == 2
     assert res["misroute_count"] == 0
+
+
+def test_cibil_credit_score_negative_lookbehind_regression():
+    """Regression test: CIBIL and credit score queries must not collide with sports score pattern.
+    Fixed after the blind run; blind result unchanged, not re-run.
+    """
+    from backend.agent.graph import route_intent_hybrid
+
+    # 1. CIBIL score inquiry (blind-15-13 failure case) now properly routes to FAQ fast path
+    intent1, conf1, path1 = route_intent_hybrid("Meri CIBIL score 680 hai, kya iska loan par asar padega?")
+    assert intent1 == "faq"
+    assert conf1 == "rule_match"
+    assert path1 == "rule_fast_path"
+
+    # 2. General credit score inquiry routes to FAQ fast path
+    intent2, conf2, path2 = route_intent_hybrid("What is the minimum credit score required for loan approval?")
+    assert intent2 == "faq"
+    assert conf2 == "rule_match"
+    assert path2 == "rule_fast_path"
+
+    # 3. Sports queries with score still correctly route to out-of-scope fallback
+    intent3, conf3, path3 = route_intent_hybrid("What was the cricket match score yesterday?")
+    assert intent3 == "fallback"
+    assert conf3 == "rule_match"
+    assert path3 == "rule_fast_path"
+
+    intent4, conf4, path4 = route_intent_hybrid("Tell me the live IPL football score")
+    assert intent4 == "fallback"
+    assert conf4 == "rule_match"
+    assert path4 == "rule_fast_path"
