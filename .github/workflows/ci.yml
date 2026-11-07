@@ -16,9 +16,9 @@ jobs:
           - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
       postgres:
         image: postgres:16-alpine
@@ -30,10 +30,10 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
+          --health-cmd "pg_isready -U trustdesk_user -d trustdesk_db"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - name: Checkout Repository
@@ -92,7 +92,7 @@ jobs:
       - name: Run Live Service Integration Tests
         env:
           REQUIRE_INTEGRATION: "1"
-          REDIS_URL: redis://localhost:6379/0
-          DATABASE_URL: postgresql://trustdesk_user:trustdesk_pass@localhost:5432/trustdesk_db
+          REDIS_URL: redis://127.0.0.1:6379/0
+          DATABASE_URL: postgresql://trustdesk_user:trustdesk_pass@127.0.0.1:5432/trustdesk_db
         run: |
           pytest -m "integration" -v

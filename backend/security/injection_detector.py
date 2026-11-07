@@ -8,9 +8,9 @@ import re
 from typing import Any, Dict
 
 PROMPT_OVERRIDE_PATTERNS = [
-    r"ignore\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions|rules|commands|prompts)",
-    r"disregard\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions|rules|prompts)",
+    r"(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior)?\s*(?:instructions|rules|commands|prompts|constraints)",
     r"override\s+(?:system|core|all)\s+(?:prompts?|instructions?|rules?)",
+    r"system\s+override",
     r"system\s*prompt\s*:",
     r"new\s*instructions\s*:",
     r"forget\s+(?:everything|all\s+instructions|your\s+role)",
@@ -19,22 +19,22 @@ PROMPT_OVERRIDE_PATTERNS = [
 DELIMITER_ATTACK_PATTERNS = [
     r"<\s*system\s*>",
     r"<\s*/\s*system\s*>",
-    r"\[\s*SYSTEM\s*\]",
-    r"\[\s*/\s*SYSTEM\s*\]",
+    r"\[\s*(?:SYSTEM|ADMIN|DEVELOPER)(?:_MODE)?\s*\]",
+    r"\[\s*/\s*(?:SYSTEM|ADMIN|DEVELOPER)(?:_MODE)?\s*\]",
     r"<\|im_start\|>",
     r"<\|im_end\|>",
     r'"""\s*(?:system|assistant|instruction)',
     r"'''\s*(?:system|assistant|instruction)",
-    r"\n\nHuman:\s*",
-    r"\n\nAssistant:\s*",
+    r"(?:\n\n|\b)(?:Human|Assistant|AI):\s*",
 ]
 
 JAILBREAK_PATTERNS = [
     r"\bDAN\s+mode\b",
     r"\bjailbreak\b",
     r"\bdo\s+anything\s+now\b",
-    r"\bunrestricted\s+developer\s+mode\b",
-    r"\bbypass\s+(?:all\s+)?(?:safety|guardrails|filters|rules)\b",
+    r"\bunrestricted\s+(?:developer\s+mode|terminal|agent|assistant)\b",
+    r"\b(?:admin|developer)\s+debug\s+mode\b",
+    r"\bbypass\s+(?:all\s+)?(?:safety|guardrails|filters|rules|pii(?:\s+masking)?)\b",
     r"\bact\s+as\s+an\s+unfiltered\b",
 ]
 

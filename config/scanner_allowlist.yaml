@@ -4,15 +4,15 @@
 
 allowlist:
   localhost_and_service_hostnames:
-    - pattern: "redis://localhost:6379/0"
+    - pattern: "redis://127.0.0.1:6379/0"
       location: ".github/workflows/ci.yml"
       type: "localhost/service hostname"
-      reason: "Loopback connection string for ephemeral Redis CI service container."
+      reason: "IPv4 loopback connection string for ephemeral Redis CI service container."
 
-    - pattern: "postgresql://trustdesk_user:trustdesk_pass@localhost:5432/trustdesk_db"
+    - pattern: "postgresql://trustdesk_user:trustdesk_pass@127.0.0.1:5432/trustdesk_db"
       location: ".github/workflows/ci.yml"
       type: "localhost/service hostname"
-      reason: "Loopback connection string for ephemeral PostgreSQL CI service container."
+      reason: "IPv4 loopback connection string for ephemeral PostgreSQL CI service container."
 
     - pattern: "http://localhost:8000"
       location: "frontend/vite.config.ts"
@@ -20,7 +20,7 @@ allowlist:
       reason: "Local development proxy target forwarding frontend API calls to FastAPI."
 
     - pattern: "http://testserver"
-      location: "tests/test_phase1_agent.py, tests/test_phase2_security_state.py"
+      location: "tests/test_phase1_agent.py, tests/test_phase2_security_state.py, tests/test_phase5_fault_injection.py"
       type: "localhost/service hostname"
       reason: "Mock base URL required by httpx ASGITransport for in-memory API testing."
 
