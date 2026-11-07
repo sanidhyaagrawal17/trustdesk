@@ -45,6 +45,15 @@ def create_app() -> FastAPI:
             "features": settings.features,
         }
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        favicon_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist" / "favicon.svg"
+        if favicon_path.exists():
+            from fastapi.responses import FileResponse
+            return FileResponse(favicon_path, media_type="image/svg+xml")
+        from fastapi.responses import Response
+        return Response(status_code=204)
+
     app.include_router(api_router)
 
     # Mount production React build if dist exists
