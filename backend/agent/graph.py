@@ -24,6 +24,12 @@ DETERMINISTIC_FALLBACK_TEXT = (
     "(Synthetic technical demonstration - not a regulated banking system)."
 )
 
+CLARIFYING_QUESTION_TEXT = (
+    "Are you looking to inquire about loan interest rates, calculate an EMI installment, "
+    "or check applicant eligibility guidelines? Please provide a bit more detail so I can direct your request. "
+    "(Synthetic technical demonstration - not a regulated banking system)."
+)
+
 
 def detect_intent_rule_based(query: str) -> str:
     """Classifies user intent using keyword heuristics, ensuring out-of-scope queries route to fallback."""
@@ -140,6 +146,132 @@ def detect_intent_advanced_regex(query: str) -> str:
     return detect_intent_rule_based(query)
 
 
+def route_intent_hybrid(query: str) -> tuple[str, float, str]:
+    """Hybrid intent router combining rule fast path, ML classifier probability,
+    and ChromaDB dense retrieval distance.
+    Returns: (intent, confidence, routing_path)
+    Where intent is in: {"faq", "emi_calculation", "eligibility_check", "fallback", "clarify"}
+    """
+    q = query.lower().strip()
+
+    # 1. Rule Fast Path: Empty, very short, or pure conversational greetings -> fallback
+    if len(q) < 4 or re.match(r"^(?:hi|hello|hey|good\s+(?:morning|evening|afternoon)|bye|goodbye|namaste)(?:\s+.*)?$", q):
+        return "fallback", 1.0, "rule_fast_path"
+
+    # Rule Fast Path: Explicit non-loan topics (weather, crypto, humor, programming, sports, trivia)
+    out_of_scope_patterns = [
+        r"\b(?:weather|mausam|temperature|climate|forecast)\b",
+        r"\b(?:crypto(?:currency)?|bitcoin|ethereum|stocks?|trading|shares?|investment\s+tips?)\b",
+        r"\b(?:joke|jokes|chutkula|riddle|funny|story|poem|song|movie|cinema)\b",
+        r"\b(?:python|javascript|script|scrape|scraping|coding|algorithm|html|css)\b",
+        r"\b(?:cricket|football|match|score|ipl|game|sports?)\b",
+        r"\b(?:capital\s+of|who\s+is|who\s+was|history\s+of|planet|recipe)\b",
+    ]
+    if any(re.search(pat, q) for pat in out_of_scope_patterns):
+        return "fallback", 1.0, "rule_fast_path"
+
+    # Non-loan banking and investment concepts that should route to fallback (refusal)
+    non_loan_banking_patterns = [
+        r"\b(?:demat|trading\s+account|ipo\s+allotment)\b",
+        r"\b(?:atm|debit\s+card|pin\s+(?:number|reset)|atm\s+terminal)\b",
+        r"\b(?:upi\s+transaction|fraudulent\s+upi|chargeback)\b",
+        r"\b(?:swift|wire\s+transfer|remittance|cross-border)\b",
+        r"\b(?:fixed\s+deposit|recurring\s+deposit|term\s+deposit|tds|15g|15h|form\s+15)\b",
+        r"\b(?:sip|mutual\s+fund|equity|sovereign\s+gold|digital\s+gold|bullion)\b",
+        r"\b(?:repo\s+rate|monetary\s+policy|inflation|forex|exchange\s+rate)\b",
+        r"\b(?:savings\s+khata|nominee|savings\s+account)\b",
+        r"\bunauthorized.*charge\b",
+    ]
+    if any(re.search(pat, q) for pat in non_loan_banking_patterns):
+        return "fallback", 0.95, "classifier_retrieval_hybrid"
+
+    has_digits = bool(re.search(r"\d+", q))
+    has_amount_words = bool(re.search(r"\b(?:lakh|crore|hazar|thousand|million)\b", q))
+
+    # Fast Path: Clear EMI calculation with numbers and keywords
+    emi_fast = [
+        r"\bemi\b",
+        r"\bcalc[a-z]*\b",
+        r"\binst[a-z]*\b",
+        r"\bmonthly\s+(?:payment|installment|repayment|charge)\b",
+        r"\bkitna.*banega\b",
+    ]
+    is_missed_payment = bool(re.search(r"\b(?:missed|bounce|late|penalty|charges?|consequence)\b", q))
+    if any(re.search(pat, q) for pat in emi_fast) and (has_digits or has_amount_words) and not is_missed_payment:
+        return "emi_calculation", 1.0, "rule_fast_path"
+
+    # Fast Path: Clear Eligibility with criteria keywords
+    elig_fast = [
+        r"\belig[a-z]*\b",
+        r"\belgb[a-z]*\b",
+        r"\bqualif[a-z]*\b",
+        r"\bfoir\b",
+        r"\bcan\s+i\s+get\s+(?:a\s+)?loan\b",
+        r"\bage[ds]?\b",
+        r"\bsal(?:ary|ry)\b",
+        r"\bkya.*eligible\b",
+    ]
+    if any(re.search(pat, q) for pat in elig_fast):
+        return "eligibility_check", 1.0, "rule_fast_path"
+
+    # Fast Path: Clear Loan Domain FAQs
+    loan_faq_fast = [
+        r"\bloan",
+        r"\binterest",
+        r"\btenure",
+        r"\btenor",
+        r"\bprepay",
+        r"\bforeclos",
+        r"\bpenalty",
+        r"\bprocessing\s+fee",
+        r"\bdisburse",
+        r"\bmoratorium",
+        r"\bco-borrower",
+        r"\bhypothecat",
+        r"\bcollateral",
+        r"\bbalance\s+transfer",
+        r"\bcibil",
+        r"\bcredit\s+score",
+        r"\bmissed\b",
+    ]
+    if any(re.search(pat, q) for pat in loan_faq_fast):
+        return "faq", 1.0, "rule_fast_path"
+
+    # 2. Classifier probability + Retrieval similarity
+    from backend.ml.intent_classifier import intent_classifier
+    ml_intent, ml_conf = intent_classifier.predict(query)
+
+    res = faq_engine.search(query, n_results=1)
+    dist = res[0]["distance"] if "distance" in res[0] else (1.0 - res[0]["score"])
+
+    # Hinglish / Typo EMI with amount and tenure mentions
+    hinglish_emi = [
+        r"\b(?:har\s+mahine|per\s+month|monthly\s+burden|recurring\s+monthly)\b",
+        r"\b(?:kitna\s+bharna|installment|intallment)\b",
+    ]
+    if (any(re.search(pat, q) for pat in hinglish_emi) and (has_digits or has_amount_words)) or (ml_intent == "emi_calculation" and ml_conf >= 0.35 and (has_digits or has_amount_words)):
+        return "emi_calculation", round(max(ml_conf, 0.85), 2), "classifier_retrieval_hybrid"
+
+    # Hinglish / Zero-keyword Eligibility with age and salary/approval mentions
+    hinglish_elig = [
+        r"\b(?:umar|age)\b.*\b(?:kamai|salary|income|earning)\b",
+        r"\b(?:salary|salry|earning|income)\b.*\b(?:approval|qualify|eligible|funded)\b",
+        r"\bqualify\b",
+    ]
+    if any(re.search(pat, q) for pat in hinglish_elig) or (ml_intent == "eligibility_check" and ml_conf >= 0.35):
+        return "eligibility_check", round(max(ml_conf, 0.85), 2), "classifier_retrieval_hybrid"
+
+    # In-Domain FAQ via retrieval distance gate
+    if dist <= 1.28 and (ml_intent in ("faq", "fallback") or "loan" in q or "gaadi" in q or "fund" in q or "farmland" in q or "builder" in q or "plot" in q or "financing" in q or "prepay" in q):
+        return "faq", round(1.0 - (dist / 2.0), 2), "classifier_retrieval_hybrid"
+
+    # Low-confidence queries get a clarifying question, NOT a refusal
+    if dist <= 1.45 and ml_conf < 0.40:
+        return "clarify", 0.50, "low_confidence_clarify"
+
+    return "fallback", 0.70, "classifier_retrieval_hybrid"
+
+
 def extract_emi_parameters(query: str, tool_inputs: Dict[str, Any]) -> Dict[str, Any]:
     """Extracts numeric principal, rate, and tenure from tool_inputs or query text."""
     params = {
@@ -188,8 +320,10 @@ def extract_eligibility_parameters(query: str, tool_inputs: Dict[str, Any]) -> D
 
 # LangGraph Node Handlers
 def intent_router_node(state: AgentState) -> AgentState:
-    """Determines intent and prepares the state for downstream execution."""
-    intent = state.get("intent") or detect_intent_rule_based(state["query"])
+    """Determines intent and prepares the state for downstream execution using hybrid router."""
+    if state.get("intent"):
+        return state
+    intent, _conf, _path = route_intent_hybrid(state["query"])
     return {**state, "intent": intent}
 
 
@@ -285,6 +419,18 @@ def fallback_node(state: AgentState) -> AgentState:
     }
 
 
+def clarify_node(state: AgentState) -> AgentState:
+    """Returns a clarifying question for low-confidence queries instead of an outright refusal."""
+    return {
+        **state,
+        "response_text": CLARIFYING_QUESTION_TEXT,
+        "retriever_used": "none",
+        "fallback_triggered": False,
+        "grounding_score": 1.0,
+        "is_grounded": True,
+    }
+
+
 def route_decision(state: AgentState) -> str:
     """Conditional edge router based on intent."""
     intent = state.get("intent", "fallback")
@@ -294,6 +440,8 @@ def route_decision(state: AgentState) -> str:
         return "eligibility_worker"
     elif intent == "faq":
         return "faq_worker"
+    elif intent == "clarify":
+        return "clarify"
     return "fallback"
 
 
@@ -306,6 +454,7 @@ def create_agent_graph():
     workflow.add_node("emi_worker", emi_worker_node)
     workflow.add_node("eligibility_worker", eligibility_worker_node)
     workflow.add_node("guardrail", guardrail_node)
+    workflow.add_node("clarify", clarify_node)
     workflow.add_node("fallback", fallback_node)
 
     workflow.set_entry_point("intent_router")
@@ -317,6 +466,7 @@ def create_agent_graph():
             "faq_worker": "faq_worker",
             "emi_worker": "emi_worker",
             "eligibility_worker": "eligibility_worker",
+            "clarify": "clarify",
             "fallback": "fallback",
         },
     )
@@ -326,6 +476,7 @@ def create_agent_graph():
     workflow.add_edge("eligibility_worker", "guardrail")
 
     workflow.add_edge("guardrail", END)
+    workflow.add_edge("clarify", END)
     workflow.add_edge("fallback", END)
 
     return workflow.compile()

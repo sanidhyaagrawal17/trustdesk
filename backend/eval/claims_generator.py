@@ -121,6 +121,20 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
             "test_function": "test_golden_set_mock_llm_evaluation",
             "test_module": "tests.test_phase3_eval",
         },
+        {
+            "id": "CLAIM-EVAL-05",
+            "category": "Evaluation & Grounding",
+            "claim": "Hybrid intent router combining rule fast path, classifier probabilities, and Chroma retrieval elevates 20-query concordance from 45% to 85% with low-confidence clarification.",
+            "test_function": "test_independent_20_query_evaluation_before_and_after_hybrid_router",
+            "test_module": "tests.test_phase3_eval",
+        },
+        {
+            "id": "CLAIM-ROUTER-01",
+            "category": "Agent Routing & Loop",
+            "claim": "Low-confidence queries return interactive clarifying questions rather than outright refusals.",
+            "test_function": "test_low_confidence_query_returns_clarifying_question",
+            "test_module": "tests.test_phase3_eval",
+        },
     ]
 
 

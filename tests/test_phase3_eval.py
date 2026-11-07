@@ -163,6 +163,44 @@ def test_independent_evaluation_suite_frozen_router():
     assert results["overall_concordance"] == 0.3333
 
 
+def test_independent_20_query_evaluation_before_and_after_hybrid_router():
+    """Verifies evaluation of 20 novel queries before (rule router) and after (hybrid router).
+    Demonstrates jump from 9/20 (45.0%) to 17/20 (85.0%) direct matches + 3/20 clarifying questions.
+    """
+    from backend.eval.independent_set_20 import evaluate_independent_20_on_router
+    from backend.agent.graph import detect_intent_rule_based, route_intent_hybrid
+
+    # Before change (rule-based router)
+    res_before = evaluate_independent_20_on_router(router_func=detect_intent_rule_based)
+    assert res_before["total_queries"] == 20
+    assert res_before["matched_count"] == 9
+    assert res_before["concordance_rate"] == 0.45
+
+    # After change (hybrid router)
+    def hybrid_adapter(q: str) -> str:
+        intent, _conf, _path = route_intent_hybrid(q)
+        return intent
+
+    res_after = evaluate_independent_20_on_router(router_func=hybrid_adapter)
+    assert res_after["total_queries"] == 20
+    assert res_after["matched_count"] == 17
+    assert res_after["concordance_rate"] == 0.85
+
+
+@pytest.mark.asyncio
+async def test_low_confidence_query_returns_clarifying_question():
+    """Verifies that an ambiguous or low-confidence query yields a clarifying question rather than refusal."""
+    from backend.agent.graph import CLARIFYING_QUESTION_TEXT, run_agent_workflow
+
+    result = await run_agent_workflow(
+        query="Purani gaadi khareedne ke liye paise mil sakte hain kya bank se?",
+        channel="untrusted",
+    )
+    assert result["intent"] == "clarify"
+    assert CLARIFYING_QUESTION_TEXT in result["response_text"]
+    assert result["fallback_triggered"] is False
+
+
 # 4. CI Workflow Configuration Verification
 def test_ci_workflow_yaml_structure():
     """Verifies .github/workflows/ci.yml defines Redis and PostgreSQL service containers and markers."""
