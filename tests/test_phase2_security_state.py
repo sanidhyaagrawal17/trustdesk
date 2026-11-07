@@ -222,6 +222,21 @@ def test_input_injection_benign_screening_behavior():
     assert res_probing["risk_category"] == "prompt_override"
 
 
+import secrets
+
+# Pytest fixtures for dynamic test bearer tokens
+@pytest.fixture
+def test_bearer_token():
+    """Generates dynamic runtime test token (zero hardcoded literal tokens)."""
+    return f"token_{secrets.token_hex(16)}"
+
+
+@pytest.fixture
+def test_invalid_bearer_token():
+    """Generates dynamic mismatched runtime test token."""
+    return f"invalid_{secrets.token_hex(16)}"
+
+
 # 4. Channel Security & Constant-Time Bearer Token Tests
 def test_channel_auth_untrusted_allowed():
     """Confirms untrusted channel allows unauthenticated access."""
@@ -230,12 +245,12 @@ def test_channel_auth_untrusted_allowed():
     assert err is None
 
 
-def test_channel_auth_trusted_valid(monkeypatch):
+def test_channel_auth_trusted_valid(monkeypatch, test_bearer_token):
     """Confirms valid Bearer token matching TRUSTED_CHANNEL_SECRET is authorized."""
-    monkeypatch.setenv("TRUSTED_CHANNEL_SECRET", "super-secret-token-key-123")
+    monkeypatch.setenv("TRUSTED_CHANNEL_SECRET", test_bearer_token)
     ok, err = validate_channel_auth(
         channel="trusted",
-        authorization_header="Bearer super-secret-token-key-123",
+        authorization_header=f"Bearer {test_bearer_token}",
     )
     assert ok is True
     assert err is None
@@ -248,23 +263,23 @@ def test_channel_auth_trusted_missing_token():
     assert "Missing Authorization" in err
 
 
-def test_channel_auth_trusted_invalid_token(monkeypatch):
+def test_channel_auth_trusted_invalid_token(monkeypatch, test_bearer_token, test_invalid_bearer_token):
     """Confirms trusted channel rejects incorrect Bearer token."""
-    monkeypatch.setenv("TRUSTED_CHANNEL_SECRET", "super-secret-token-key-123")
+    monkeypatch.setenv("TRUSTED_CHANNEL_SECRET", test_bearer_token)
     ok, err = validate_channel_auth(
         channel="trusted",
-        authorization_header="Bearer wrong-token-xyz",
+        authorization_header=f"Bearer {test_invalid_bearer_token}",
     )
     assert ok is False
     assert "Unauthorized" in err
 
 
-def test_channel_auth_trusted_unset_secret(monkeypatch):
+def test_channel_auth_trusted_unset_secret(monkeypatch, test_bearer_token):
     """Confirms trusted channel rejects request if server secret is unset in environment."""
     monkeypatch.delenv("TRUSTED_CHANNEL_SECRET", raising=False)
     ok, err = validate_channel_auth(
         channel="trusted",
-        authorization_header="Bearer arbitrary-token",
+        authorization_header=f"Bearer {test_bearer_token}",
     )
     assert ok is False
     assert "not configured" in err
@@ -390,9 +405,9 @@ async def test_mock_llm_receives_no_raw_pii():
 
 
 @pytest.mark.asyncio
-async def test_json_logs_and_metrics_contain_no_raw_pii_or_secret(monkeypatch):
+async def test_json_logs_and_metrics_contain_no_raw_pii_or_secret(monkeypatch, test_bearer_token):
     """Verifies that structured JSON logs and /api/metrics contain no raw PII and no Bearer token."""
-    secret_token = "secret-trusted-channel-auth-key-888"
+    secret_token = test_bearer_token
     monkeypatch.setenv("TRUSTED_CHANNEL_SECRET", secret_token)
 
     # Attach string stream handler to capture JSON logs

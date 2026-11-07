@@ -1,0 +1,42 @@
+# TrustDesk Security Scanner Allowlist
+# Technical demonstration on synthetic data - not a regulated banking system.
+# Documented rationale for benign non-secret patterns permitted in repository.
+
+allowlist:
+  localhost_and_service_hostnames:
+    - pattern: "redis://localhost:6379/0"
+      location: ".github/workflows/ci.yml"
+      type: "localhost/service hostname"
+      reason: "Loopback connection string for ephemeral Redis CI service container."
+
+    - pattern: "postgresql://trustdesk_user:trustdesk_pass@localhost:5432/trustdesk_db"
+      location: ".github/workflows/ci.yml"
+      type: "localhost/service hostname"
+      reason: "Loopback connection string for ephemeral PostgreSQL CI service container."
+
+    - pattern: "http://localhost:8000"
+      location: "frontend/vite.config.ts"
+      type: "localhost/service hostname"
+      reason: "Local development proxy target forwarding frontend API calls to FastAPI."
+
+    - pattern: "http://testserver"
+      location: "tests/test_phase1_agent.py, tests/test_phase2_security_state.py"
+      type: "localhost/service hostname"
+      reason: "Mock base URL required by httpx ASGITransport for in-memory API testing."
+
+  ci_service_placeholders:
+    - pattern: "POSTGRES_PASSWORD: trustdesk_pass"
+      location: ".github/workflows/ci.yml"
+      type: "CI service placeholder"
+      reason: "Documented ephemeral throwaway password for GitHub Actions test container."
+
+  external_cdn_and_font_urls:
+    - pattern: "https://fonts.googleapis.com"
+      location: "frontend/index.html"
+      type: "external CDN/font URL"
+      reason: "Google Fonts stylesheet origin for Inter and JetBrains Mono fonts."
+
+    - pattern: "https://fonts.gstatic.com"
+      location: "frontend/index.html"
+      type: "external CDN/font URL"
+      reason: "Google Fonts static asset CDN origin."
