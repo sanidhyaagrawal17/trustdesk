@@ -233,3 +233,20 @@ def test_ci_workflow_yaml_structure():
     assert any('pytest -m "not integration"' in cmd for cmd in step_commands)
     assert any('pytest -m "integration"' in cmd for cmd in step_commands)
     assert any("REQUIRE_INTEGRATION" in str(s.get("env", {})) for s in steps)
+
+
+def test_blind_15_query_evaluation_frozen_router():
+    """Verifies evaluation of 15 novel blind queries on the frozen hybrid router (commit 3eebf52).
+    Results: 9 pass, 4 clarify, 2 false refusal, 0 misroute out of N=15.
+    """
+    from backend.agent.graph import route_intent_hybrid
+    from backend.eval.blind_set_15 import evaluate_blind_15_on_router, FROZEN_ROUTER_COMMIT
+
+    assert FROZEN_ROUTER_COMMIT == "3eebf52"
+    res = evaluate_blind_15_on_router(route_intent_hybrid)
+
+    assert res["total"] == 15
+    assert res["pass_count"] == 9
+    assert res["clarify_count"] == 4
+    assert res["false_refusal_count"] == 2
+    assert res["misroute_count"] == 0

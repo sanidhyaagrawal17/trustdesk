@@ -129,6 +129,13 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
             "test_module": "tests.test_phase3_eval",
         },
         {
+            "id": "CLAIM-EVAL-06",
+            "category": "Evaluation & Grounding",
+            "claim": "Blind evaluation suite (N=15, router frozen at 3eebf52) achieves 9 pass, 4 clarify, 2 false refusal, and 0 misroute with zero post-hoc tuning.",
+            "test_function": "test_blind_15_query_evaluation_frozen_router",
+            "test_module": "tests.test_phase3_eval",
+        },
+        {
             "id": "CLAIM-ROUTER-01",
             "category": "Agent Routing & Loop",
             "claim": "Low-confidence queries return interactive clarifying questions rather than outright refusals.",

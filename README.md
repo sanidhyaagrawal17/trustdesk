@@ -201,6 +201,50 @@ After implementing the **Hybrid Intent Router** (combining rule fast path for ex
 
 ---
 
+## Blind set ($N=15$, router frozen at `3eebf52`)
+
+A held-out suite of 15 queries evaluated once on the frozen hybrid router without any post-hoc tuning.
+
+### Results Summary ($N=15$)
+- **Pass**: **9 / 15 (60.0%)** (correct intent routed to tool or fallback)
+- **Clarify**: **4 / 15 (26.7%)** (low-confidence ambiguous queries prompted for clarification)
+- **False Refusal**: **2 / 15 (13.3%)** (in-domain queries falsely routed to fallback)
+- **Misroute**: **0 / 15 (0.0%)** (zero queries misrouted to wrong tools)
+
+### Full Item Breakdown
+
+| ID | Query Text | Expected | Predicted Intent | Routing Path & Confidence | Outcome |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `blind-15-01` | *"Mujhe shaadi ke liye paise udhaar chahiye, kitna byaaj lagega?"* | `faq` | `fallback` | `classifier_retrieval_hybrid` (Conf 0.70) | False Refusal |
+| `blind-15-02` | *"if i borow 8 lakh for 4 yrs at 9.5 pct what do i pay every month"* | `emi_calculation` | `clarify` | `low_confidence_clarify` (Conf 0.50) | Clarify |
+| `blind-15-03` | *"meri salary 42000 hai aur age 31, kya mujhe lone mil jayega"* | `eligibility_check` | `eligibility_check` | `rule_fast_path` (`rule_match`) | Pass |
+| `blind-15-04` | *"What papers do I need to submit before disbursal of two-wheeler finance?"* | `faq` | `clarify` | `low_confidence_clarify` (Conf 0.50) | Clarify |
+| `blind-15-05` | *"Can I settle my existing debt early without extra fees?"* | `faq` | `clarify` | `low_confidence_clarify` (Conf 0.50) | Clarify |
+| `blind-15-06` | *"Which is better, a gold ETF or a sovereign gold bond?"* | `fallback` | `fallback` | `classifier_retrieval_hybrid` (Conf 0.95) | Pass |
+| `blind-15-07` | *"How do I reset my net banking password?"* | `fallback` | `fallback` | `classifier_retrieval_hybrid` (Conf 0.70) | Pass |
+| `blind-15-08` | *"Is there a penalty if I clear the remaining amount ahead of schedule?"* | `faq` | `faq` | `rule_fast_path` (`rule_match`) | Pass |
+| `blind-15-09` | *"What will I pay monthly on 15 lakhs over 20 years at 8.75 percent?"* | `emi_calculation` | `emi_calculation` | `classifier_retrieval_hybrid` (Conf 0.85) | Pass |
+| `blind-15-10` | *"I earn 35k and already pay 12k towards another credit, am I good to go?"* | `eligibility_check` | `clarify` | `low_confidence_clarify` (Conf 0.50) | Clarify |
+| `blind-15-11` | *"Tell me a poem about the monsoon"* | `fallback` | `fallback` | `rule_fast_path` (`rule_match`) | Pass |
+| `blind-15-12` | *"How do I apply for a new PAN card online?"* | `fallback` | `fallback` | `classifier_retrieval_hybrid` (Conf 0.70) | Pass |
+| `blind-15-13` | *"Meri CIBIL score 680 hai, kya iska loan par asar padega?"* | `faq` | `fallback` | `rule_fast_path` (`rule_match`) | False Refusal |
+| `blind-15-14` | *"What’s the difference between fixed and floating rates on a mortgage?"* | `faq` | `faq` | `classifier_retrieval_hybrid` (Conf 0.82) | Pass |
+| `blind-15-15` | *"Please book a flight from Indore to Pune"* | `fallback` | `fallback` | `classifier_retrieval_hybrid` (Conf 0.70) | Pass |
+
+### Failing Queries & Root Causes (Documented Without Changing Frozen Router)
+
+1. **`blind-15-01`**: *"Mujhe shaadi ke liye paise udhaar chahiye, kitna byaaj lagega?"*
+   - **Route**: `fallback` via `classifier_retrieval_hybrid` (Conf 0.70) -> **False Refusal**
+   - **Root Cause**: The query uses pure Hindi vernacular loan vocabulary (*"udhaar"* = loan/borrow, *"byaaj"* = interest) without English loan keywords. The ML classifier yielded uniform uncertainty and Chroma distance exceeded $1.28$, dropping to fallback.
+   - **Future Improvement Only**: Expand Hindi vocabulary stems in training and fast-path lexicons for *"udhaar"* and *"byaaj"*.
+
+2. **`blind-15-13`**: *"Meri CIBIL score 680 hai, kya iska loan par asar padega?"*
+   - **Route**: `fallback` via `rule_fast_path` (`rule_match`) -> **False Refusal**
+   - **Root Cause**: The token `score` in the general out-of-scope sports regex (`\b(?:cricket|football|match|score|ipl|game|sports?)\b`) collided with "CIBIL score", causing premature fast-path refusal despite the query being a valid credit score inquiry.
+   - **Future Improvement Only**: Narrow sports regex to require game context (e.g., `(?:match|ipl|game)\s+score`) or add negative lookbehind `(?<!cibil\s)(?<!credit\s)score`.
+
+---
+
 ## Invented Synthetic Thresholds
 
 All applicant eligibility thresholds are synthetic and invented for demonstration purposes:
