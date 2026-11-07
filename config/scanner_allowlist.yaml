@@ -9,10 +9,10 @@ allowlist:
       type: "localhost/service hostname"
       reason: "IPv4 loopback connection string for ephemeral Redis CI service container."
 
-    - pattern: "postgresql://trustdesk_user:trustdesk_pass@127.0.0.1:5432/trustdesk_db"
+    - pattern: "postgresql+psycopg2://trustdesk_user:trustdesk_pass@127.0.0.1:5432/trustdesk_db"
       location: ".github/workflows/ci.yml"
       type: "localhost/service hostname"
-      reason: "IPv4 loopback connection string for ephemeral PostgreSQL CI service container."
+      reason: "IPv4 loopback connection string with psycopg2 driver for ephemeral PostgreSQL CI service container."
 
     - pattern: "http://localhost:8000"
       location: "frontend/vite.config.ts"

@@ -52,8 +52,14 @@ class DualModeAuditLogger:
         self._backend_type = "sqlite"
 
         if url and ("postgres" in url or "postgresql" in url):
+            clean_url = url
+            if clean_url.startswith("postgresql://"):
+                clean_url = clean_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            elif clean_url.startswith("postgres://"):
+                clean_url = clean_url.replace("postgres://", "postgresql+psycopg2://", 1)
+
             try:
-                self.engine = create_engine(url, pool_pre_ping=True)
+                self.engine = create_engine(clean_url, pool_pre_ping=True)
                 with self.engine.connect() as conn:
                     metadata.create_all(self.engine)
                 self._backend_type = "postgresql"

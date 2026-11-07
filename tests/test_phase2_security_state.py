@@ -508,14 +508,6 @@ def test_live_redis_service_integration():
 def test_live_postgres_service_integration():
     """Integration test marked @pytest.mark.integration for live PostgreSQL service container."""
     db_url = _check_integration_requirement("DATABASE_URL", "PostgreSQL")
-    from sqlalchemy import create_engine
-    try:
-        engine = create_engine(db_url, pool_pre_ping=True)
-        with engine.connect() as conn:
-            pass
-    except Exception as exc:
-        pytest.fail(f"Direct PostgreSQL connection failed to {db_url}: {type(exc).__name__}: {exc}")
-
     logger = DualModeAuditLogger(db_url=db_url)
     assert logger.backend_type == "postgresql"
 

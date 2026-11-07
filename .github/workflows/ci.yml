@@ -93,6 +93,6 @@ jobs:
         env:
           REQUIRE_INTEGRATION: "1"
           REDIS_URL: redis://127.0.0.1:6379/0
-          DATABASE_URL: postgresql://trustdesk_user:trustdesk_pass@127.0.0.1:5432/trustdesk_db
+          DATABASE_URL: postgresql+psycopg2://trustdesk_user:trustdesk_pass@127.0.0.1:5432/trustdesk_db
         run: |
           pytest -m "integration" -v
