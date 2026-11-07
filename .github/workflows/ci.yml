@@ -96,3 +96,42 @@ jobs:
           DATABASE_URL: postgresql+psycopg2://trustdesk_user:trustdesk_pass@127.0.0.1:5432/trustdesk_db
         run: |
           pytest -m "integration" -v
+
+  container-build-smoke-test:
+    name: Container Build & Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build and Start Containers
+        run: |
+          docker compose up -d --build
+
+      - name: Wait for Backend and Health Check
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/health | grep -q "healthy"; then
+              echo "Backend healthy after $i attempts!"
+              break
+            fi
+            echo "Waiting for backend ($i/30)..."
+            sleep 2
+          done
+
+      - name: Smoke-Test /health and /api/health Endpoints
+        run: |
+          echo "=== Root /health ==="
+          curl -f -s http://localhost:8000/health
+          echo -e "\n=== API /api/health ==="
+          curl -f -s http://localhost:8000/api/health
+
+      - name: Smoke-Test Frontend Delivery
+        run: |
+          echo "=== Frontend HTTP Check ==="
+          curl -f -s -I http://localhost:3000 | head -n 5
+
+      - name: Tear Down Containers
+        if: always()
+        run: |
+          docker compose down -v

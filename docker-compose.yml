@@ -17,6 +17,11 @@ services:
       POSTGRES_DB: trustdesk_db
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trustdesk_user -d trustdesk_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
   backend:
@@ -26,12 +31,14 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+psycopg2://trustdesk_user:trustdesk_pass@postgres:5432/trustdesk_db
-      TRUSTED_CHANNEL_TOKEN: trustdesk_local_demo_token
+      TRUSTED_CHANNEL_SECRET: ${TRUSTED_CHANNEL_SECRET:-}
     ports:
       - "8000:8000"
     depends_on:
-      - redis
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
 
   frontend:

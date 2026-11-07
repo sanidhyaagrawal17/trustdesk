@@ -210,6 +210,31 @@ async def test_agent_workflow_deterministic_fallback():
 
 
 @pytest.mark.asyncio
+async def test_out_of_scope_queries_refusal_and_redirection():
+    """Confirms diverse out-of-scope queries (weather, crypto, humor, code, greetings)
+    are routed to fallback and return explicit redirection guidance.
+    """
+    out_of_scope_queries = [
+        "What is the weather in London today?",
+        "Can you give me investment tips for cryptocurrency?",
+        "Tell me a joke about robots",
+        "Write a python script to scrape web pages",
+        "hi",
+    ]
+    for q in out_of_scope_queries:
+        # 1. Routing classification
+        intent = detect_intent_rule_based(q)
+        assert intent == "fallback", f"Query '{q}' expected 'fallback', got '{intent}'"
+
+        # 2. Workflow execution
+        res = await run_agent_workflow(query=q, channel="untrusted")
+        assert res["fallback_triggered"] is True
+        assert res["intent"] == "fallback"
+        assert DETERMINISTIC_FALLBACK_TEXT in res["response_text"]
+        assert "Please ask about synthetic interest rates, EMI calculations, or applicant eligibility guidelines" in res["response_text"]
+
+
+@pytest.mark.asyncio
 async def test_agent_workflow_timeout_fallback():
     """Tests that timeout triggers deterministic fallback safely."""
     # Force timeout by providing negative timeout

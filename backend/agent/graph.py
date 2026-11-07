@@ -26,64 +26,42 @@ DETERMINISTIC_FALLBACK_TEXT = (
 
 
 def detect_intent_rule_based(query: str) -> str:
-    """Classifies user intent using simple keyword heuristics for routing."""
-    q = query.lower()
-
-    # EMI calculation intent
-    emi_patterns = [r"\bemi\b", r"\bcalculate\b", r"\binstallment\b", r"\bmonthly payment\b"]
-    if any(re.search(pat, q) for pat in emi_patterns) and any(c.isdigit() for c in q):
-        return "emi_calculation"
-
-    # Eligibility check intent
-    eligibility_patterns = [
-        r"\beligib", r"\bqualif", r"\bcan i get\b", r"\bsalary\b", r"\bage limit\b", r"\bfoir\b"
-    ]
-    if any(re.search(pat, q) for pat in eligibility_patterns):
-        return "eligibility_check"
-
-    # Fallback for empty or adversarial input
-    if len(q.strip()) < 3:
-        return "fallback"
-
-    # Default to FAQ
-    return "faq"
-
-
-def detect_intent_advanced_regex(query: str) -> str:
-    """Classifies user intent using a stronger regex and compound pattern baseline."""
+    """Classifies user intent using keyword heuristics, ensuring out-of-scope queries route to fallback."""
     q = query.lower().strip()
 
-    # Fallback on short queries
-    if len(q) < 4:
+    # 1. Fallback for empty, short, or purely conversational greetings
+    if len(q) < 4 or re.match(r"^(?:hi|hello|hey|good\s+(?:morning|evening|afternoon)|bye|goodbye|namaste)(?:\s+.*)?$", q):
         return "fallback"
 
-    # 1. Injection refusal check
-    injection_patterns = [
-        r"\bignore\s+(?:all\s+)?(?:previous|prior|purane)\b",
-        r"\bdisregard\b",
-        r"\bsystem\s*prompt\b",
-        r"\bdan\s+mode\b",
-        r"\bjailbreak\b",
+    # 2. Out-of-scope non-loan topics (weather, crypto, humor, programming, sports, trivia)
+    out_of_scope_patterns = [
+        r"\b(?:weather|mausam|temperature|climate|forecast)\b",
+        r"\b(?:crypto(?:currency)?|bitcoin|ethereum|stocks?|trading|shares?|investment\s+tips?)\b",
+        r"\b(?:joke|jokes|chutkula|riddle|funny|story|poem|song|movie|cinema)\b",
+        r"\b(?:python|javascript|script|scrape|scraping|code|coding|software|algorithm|html|css)\b",
+        r"\b(?:cricket|football|match|score|ipl|game|sports?)\b",
+        r"\b(?:capital\s+of|who\s+is|who\s+was|history\s+of|planet|recipe)\b",
     ]
-    if any(re.search(pat, q) for pat in injection_patterns):
+    if any(re.search(pat, q) for pat in out_of_scope_patterns):
         return "fallback"
 
-    # 2. Stronger EMI pattern: requires calculation/installment keywords alongside numeric context
-    emi_keywords = [
+    # 3. EMI calculation intent: requires calculation/installment keywords alongside numbers
+    emi_patterns = [
         r"\bemi\b",
         r"\bcalc(?:ulate|late)?\b",
         r"\binstallment\b",
         r"\bintallment\b",
         r"\brepayment\b",
         r"\bmonthly\s+payment\b",
+        r"\bmonthly\s+installment\b",
         r"\bkitna.*banega\b",
     ]
     has_digits = bool(re.search(r"\d+", q))
-    if any(re.search(pat, q) for pat in emi_keywords) and has_digits:
+    if any(re.search(pat, q) for pat in emi_patterns) and has_digits:
         return "emi_calculation"
 
-    # 3. Stronger Eligibility pattern: qualification, salary, age criteria, FOIR
-    eligibility_keywords = [
+    # 4. Eligibility check intent: qualification, salary, age criteria, FOIR
+    eligibility_patterns = [
         r"\beligib",
         r"\belgibl",
         r"\bqualif",
@@ -91,27 +69,75 @@ def detect_intent_advanced_regex(query: str) -> str:
         r"\bsal(?:ary|ry)\b",
         r"\bincome\b",
         r"\bfoir\b",
-        r"\bage\b",
+        r"\bage[ds]?\b",
         r"\bkya.*eligible\b",
     ]
-    if any(re.search(pat, q) for pat in eligibility_keywords):
+    if any(re.search(pat, q) for pat in eligibility_patterns):
         return "eligibility_check"
 
-    # 4. Out-of-scope greeting / conversational patterns
-    conversational_patterns = [
-        r"^(?:hi|hello|hey|good\s+(?:morning|evening|afternoon)|bye|goodbye)$",
-        r"\bweather\b",
-        r"\bjoke\b",
-        r"\bcricket\b",
-        r"\bcapital\s+of\b",
-        r"\bmovie\b",
-        r"\bhomework\b",
+    # 5. Loan domain terms required for FAQ retrieval
+    loan_domain_patterns = [
+        r"\bloan",
+        r"\binterest",
+        r"\brate",
+        r"\btenure",
+        r"\btenor",
+        r"\bprepay",
+        r"\bforeclos",
+        r"\bpenalty",
+        r"\bfee",
+        r"\bcharg",
+        r"\bdocument",
+        r"\bkyc",
+        r"\baadhaar",
+        r"\bpan\b",
+        r"\bdisburse",
+        r"\bmoratorium",
+        r"\bco-borrower",
+        r"\bhypothecat",
+        r"\bcollateral",
+        r"\bgold",
+        r"\bauto",
+        r"\bcar\b",
+        r"\bvehicle",
+        r"\beducation",
+        r"\bhome\b",
+        r"\bhouse\b",
+        r"\bproperty",
+        r"\bmortgage",
+        r"\bpersonal\b",
+        r"\btax\b",
+        r"\b80c\b",
+        r"\b24b\b",
+        r"\bbalance\s+transfer",
+        r"\bcibil",
+        r"\bcredit\s+score",
+        r"\bdefault",
+        r"\bbank",
+        r"\blender",
+        r"\btrustdesk",
+        r"\bborrow",
+        r"\bsanction",
+        r"\bltv\b",
+        r"\bmargin\b",
+        r"\bdown\s+payment\b",
+        r"\bmorgage\b",
+        r"\bintrst\b",
+        r"\bsinthetic\b",
+        r"\bemi\b",
+        r"\bpayment\b",
+        r"\bmissed\b",
     ]
-    if any(re.search(pat, q) for pat in conversational_patterns):
-        return "fallback"
+    if any(re.search(pat, q) for pat in loan_domain_patterns):
+        return "faq"
 
-    # 5. Domain FAQ terms
-    return "faq"
+    # Unrecognized or out-of-scope non-loan queries route to fallback
+    return "fallback"
+
+
+def detect_intent_advanced_regex(query: str) -> str:
+    """Classifies user intent using advanced compound regex matching."""
+    return detect_intent_rule_based(query)
 
 
 def extract_emi_parameters(query: str, tool_inputs: Dict[str, Any]) -> Dict[str, Any]:

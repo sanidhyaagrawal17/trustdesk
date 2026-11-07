@@ -30,11 +30,6 @@ allowlist:
       type: "CI service placeholder"
       reason: "Documented ephemeral throwaway password for GitHub Actions test container and local Docker Compose."
 
-    - pattern: "TRUSTED_CHANNEL_TOKEN: trustdesk_local_demo_token"
-      location: "docker-compose.yml"
-      type: "CI service placeholder"
-      reason: "Documented throwaway token for local standalone Docker Compose demonstration."
-
   external_cdn_and_font_urls:
     - pattern: "https://fonts.googleapis.com"
       location: "frontend/index.html"
