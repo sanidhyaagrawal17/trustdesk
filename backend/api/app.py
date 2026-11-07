@@ -56,7 +56,7 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router)
 
-    # Mount production React build if dist exists
+    # Mount compiled React build if dist exists
     dist_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
     if dist_dir.exists():
         app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="frontend")
