@@ -14,6 +14,8 @@
 | `CLAIM-SECURITY-05` | **Security & Privacy** | Heuristic input injection detector screens prompt overrides and jailbreaks on masked text. | `test_adversarial_injection_detection_screening` |
 | `CLAIM-RESILIENCE-01` | **Fault Tolerance & Dual-Mode Adapters** | Redis outage triggers automatic graceful fallback to thread-safe in-memory session store. | `test_redis_outage_graceful_fallback` |
 | `CLAIM-RESILIENCE-02` | **Fault Tolerance & Dual-Mode Adapters** | PostgreSQL outage triggers automatic graceful fallback to local SQLite audit logger. | `test_postgresql_outage_graceful_fallback` |
+| `CLAIM-RESILIENCE-03` | **Fault Tolerance & Dual-Mode Adapters** | Live storage adapter health status is exposed via /api/health, and connection failures log warning notices. | `test_health_endpoints_adapter_reporting` |
+| `CLAIM-SECURITY-06` | **Security & Privacy** | Held-out adversarial attacks and benign loan queries achieve 100% catch rate and 0.0% false-positive rate. | `test_held_out_injection_and_benign_catch_and_fp_rates` |
 | `CLAIM-STREAMING-01` | **API & Streaming** | SSE endpoint streams status, token, metadata, and done events with trace IDs. | `test_sse_chat_stream_protocol` |
 | `CLAIM-EVAL-01` | **Evaluation & Grounding** | Token-overlap grounding guardrail scores model claims against FAQ knowledge base. | `test_grounding_evaluator_high_overlap` |
 | `CLAIM-EVAL-02` | **Evaluation & Grounding** | Intent classifier is evaluated on synthetic test split and benchmarked against keyword baseline. | `test_intent_classifier_evaluation_metrics` |

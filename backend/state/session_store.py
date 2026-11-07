@@ -5,10 +5,13 @@ Technical demonstration on synthetic data - not a regulated banking system.
 """
 
 import json
+import logging
 import os
 import threading
 import time
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger("trustdesk.session_store")
 
 
 class InMemorySessionStore:
@@ -95,7 +98,10 @@ class DualModeSessionStore:
             try:
                 self._adapter = RedisSessionStore(url)
                 self._backend_type = "redis"
-            except Exception:
+            except Exception as exc:
+                if os.getenv("REQUIRE_INTEGRATION") == "1":
+                    raise exc
+                logger.warning("Redis connection failed (%s); falling back to in-memory session store.", exc)
                 self._adapter = InMemorySessionStore()
                 self._backend_type = "in_memory"
         else:

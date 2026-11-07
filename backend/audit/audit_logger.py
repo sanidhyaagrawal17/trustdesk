@@ -4,10 +4,13 @@ Timing Invariant: Logs already-masked text only.
 Technical demonstration on synthetic data - not a regulated banking system.
 """
 
+import logging
 import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger("trustdesk.audit_logger")
 from sqlalchemy import (
     Boolean,
     Column,
@@ -66,6 +69,7 @@ class DualModeAuditLogger:
             except Exception as exc:
                 if os.getenv("REQUIRE_INTEGRATION") == "1":
                     raise exc
+                logger.warning("PostgreSQL connection failed (%s); falling back to SQLite audit store.", exc)
                 self.engine = create_engine(DEFAULT_SQLITE_URL, connect_args={"check_same_thread": False})
                 metadata.create_all(self.engine)
                 self._backend_type = "sqlite"

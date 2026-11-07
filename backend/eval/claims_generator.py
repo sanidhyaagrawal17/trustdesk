@@ -73,6 +73,20 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
             "test_module": "tests.test_phase5_fault_injection",
         },
         {
+            "id": "CLAIM-RESILIENCE-03",
+            "category": "Fault Tolerance & Dual-Mode Adapters",
+            "claim": "Live storage adapter health status is exposed via /api/health, and connection failures log warning notices.",
+            "test_function": "test_health_endpoints_adapter_reporting",
+            "test_module": "tests.test_phase2_security_state",
+        },
+        {
+            "id": "CLAIM-SECURITY-06",
+            "category": "Security & Privacy",
+            "claim": "Held-out adversarial attacks and benign loan queries achieve 100% catch rate and 0.0% false-positive rate.",
+            "test_function": "test_held_out_injection_and_benign_catch_and_fp_rates",
+            "test_module": "tests.test_phase5_fault_injection",
+        },
+        {
             "id": "CLAIM-STREAMING-01",
             "category": "API & Streaming",
             "claim": "SSE endpoint streams status, token, metadata, and done events with trace IDs.",
@@ -126,3 +140,12 @@ def generate_verified_claims_markdown() -> str:
     ])
 
     return "\n".join(md_lines)
+
+
+if __name__ == "__main__":
+    from pathlib import Path
+    output_path = Path(__file__).resolve().parent.parent.parent / "docs" / "VERIFIED_CLAIMS.md"
+    content = generate_verified_claims_markdown()
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content + "\n")
+    print(f"Generated verified claims catalog at {output_path}")

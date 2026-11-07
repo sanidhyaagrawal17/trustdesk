@@ -479,6 +479,38 @@ async def test_metrics_endpoint():
         assert data["storage_adapters"]["audit_logger"] in ("sqlite", "postgresql")
 
 
+@pytest.mark.asyncio
+async def test_health_endpoints_adapter_reporting():
+    """Verifies both /api/health and /health report active storage adapters."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        for path in ("/api/health", "/health"):
+            res = await client.get(path)
+            assert res.status_code == 200
+            data = res.json()
+            assert "storage_adapters" in data
+            assert data["storage_adapters"]["session_store"] in ("in_memory", "redis")
+            assert data["storage_adapters"]["audit_logger"] in ("sqlite", "postgresql")
+
+
+def test_adapter_fallback_logs_warning(caplog):
+    """Verifies that when live stores are unavailable, fallbacks log explicit warnings."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        # 1. Redis fallback warning
+        store = DualModeSessionStore(redis_url="redis://127.0.0.1:9999/0")
+        assert store.backend_type == "in_memory"
+        assert "Redis connection failed" in caplog.text
+
+        caplog.clear()
+
+        # 2. PostgreSQL fallback warning
+        audit = DualModeAuditLogger(db_url="postgresql://invalid:invalid@127.0.0.1:9999/invalid_db")
+        assert audit.backend_type == "sqlite"
+        assert "PostgreSQL connection failed" in caplog.text
+
+
 # 7. Integration Tests for Live Services (Redis & PostgreSQL)
 def _check_integration_requirement(env_var_name: str, service_name: str) -> str:
     """Helper for REQUIRE_INTEGRATION flag enforcement."""
@@ -494,24 +526,43 @@ def _check_integration_requirement(env_var_name: str, service_name: str) -> str:
 
 @pytest.mark.integration
 def test_live_redis_service_integration():
-    """Integration test marked @pytest.mark.integration for live Redis service container."""
+    """Integration test marked @pytest.mark.integration for live Redis service container.
+    Verifies full write/read round trip and session cleanup.
+    """
     redis_url = _check_integration_requirement("REDIS_URL", "Redis")
     store = DualModeSessionStore(redis_url=redis_url)
     assert store.backend_type == "redis"
-    store.save_message("ci-test-session", "user", "Live Redis integration check")
-    history = store.get_history("ci-test-session")
-    assert len(history) >= 1
-    store.clear("ci-test-session")
+
+    session_id = "ci-test-roundtrip-session"
+    store.clear(session_id)
+
+    # 1. Write user query and assistant response
+    store.save_message(session_id, "user", "Live Redis integration check")
+    store.save_message(session_id, "assistant", "Verified round trip payload")
+
+    # 2. Read back and assert exact round-trip contents
+    history = store.get_history(session_id)
+    assert len(history) == 2
+    assert history[0]["role"] == "user"
+    assert history[0]["content"] == "Live Redis integration check"
+    assert history[1]["role"] == "assistant"
+    assert history[1]["content"] == "Verified round trip payload"
+
+    # 3. Clean up and assert emptiness
+    store.clear(session_id)
+    assert len(store.get_history(session_id)) == 0
 
 
 @pytest.mark.integration
 def test_live_postgres_service_integration():
-    """Integration test marked @pytest.mark.integration for live PostgreSQL service container."""
+    """Integration test marked @pytest.mark.integration for live PostgreSQL service container.
+    Verifies full write/read round trip and recent logs query.
+    """
     db_url = _check_integration_requirement("DATABASE_URL", "PostgreSQL")
     logger = DualModeAuditLogger(db_url=db_url)
     assert logger.backend_type == "postgresql"
 
-    test_trace_id = "trace-ci-pg-test-001"
+    test_trace_id = "trace-ci-pg-roundtrip-001"
     logger.log_event(
         trace_id=test_trace_id,
         channel="trusted",
@@ -525,8 +576,20 @@ def test_live_postgres_service_integration():
         latency_ms=12.5,
     )
 
+    # Read back by trace ID and verify all persisted attributes
     entry = logger.get_log_by_trace_id(test_trace_id)
     assert entry is not None
     assert entry["trace_id"] == test_trace_id
     assert entry["channel"] == "trusted"
-    assert entry["grounding_score"] == 0.98
+    assert entry["masked_query"] == "Live PostgreSQL integration audit log"
+    assert entry["intent"] == "faq"
+    assert entry["retriever_used"] == "chroma"
+    assert abs(entry["grounding_score"] - 0.98) < 1e-4
+    assert entry["is_grounded"] is True
+    assert entry["injection_detected"] is False
+    assert entry["response_summary"] == "PostgreSQL live audit verified"
+    assert abs(entry["latency_ms"] - 12.5) < 1e-4
+
+    # Verify recent logs retrieval
+    recent = logger.get_recent_logs(limit=5)
+    assert any(log["trace_id"] == test_trace_id for log in recent)

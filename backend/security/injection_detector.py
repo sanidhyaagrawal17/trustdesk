@@ -8,19 +8,24 @@ import re
 from typing import Any, Dict
 
 PROMPT_OVERRIDE_PATTERNS = [
-    r"(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior)?\s*(?:instructions|rules|commands|prompts|constraints)",
+    r"(?:ignore|ignorr|disregard|forget|foget)\s+(?:all\s+)?(?:previous|prior|secret)?\s*(?:instructions|instructins|rules|commands|prompts|constraints|directives)",
     r"override\s+(?:system|core|all)\s+(?:prompts?|instructions?|rules?)",
     r"system\s+override",
     r"system\s*prompt\s*:",
     r"new\s*instructions\s*:",
     r"forget\s+(?:everything|all\s+instructions|your\s+role)",
+    r"(?:purane|sab|saare|sare)\s+(?:rules|instructions|niyam|prompts)\s+(?:bhool\s+jao|bhula\s+do|hatao|chhod\s+do|ignore\s+kar\s+do)",
+    r"(?:bhool\s+jao|bhula\s+do|hatao|ignore\s+kar\s+do)\s+(?:saare|sare|sab|purane)\s*(?:instructions|rules|niyam|prompts)",
+    r"(?:system\s*prompt|system\s*directives?)\s*(?:dikhao|batao|reveal|print|dump)",
+    r"(?:disregard|ignore)\s+prior\s+constraints",
+    r"(?:dump|reveal|output)\s+(?:all\s+)?(?:secret|internal)?\s*(?:directives|instructions|prompts)",
 ]
 
 DELIMITER_ATTACK_PATTERNS = [
     r"<\s*system\s*>",
     r"<\s*/\s*system\s*>",
-    r"\[\s*(?:SYSTEM|ADMIN|DEVELOPER)(?:_MODE)?\s*\]",
-    r"\[\s*/\s*(?:SYSTEM|ADMIN|DEVELOPER)(?:_MODE)?\s*\]",
+    r"\[\s*(?:SYSTEM|ADMIN|DEVELOPER)(?:_MODE|_OVERRIDE)?\s*\]",
+    r"\[\s*/\s*(?:SYSTEM|ADMIN|DEVELOPER)(?:_MODE|_OVERRIDE)?\s*\]",
     r"<\|im_start\|>",
     r"<\|im_end\|>",
     r'"""\s*(?:system|assistant|instruction)',

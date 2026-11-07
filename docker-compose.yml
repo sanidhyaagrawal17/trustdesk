@@ -1,0 +1,45 @@
+# TrustDesk Docker Compose Specification
+# Technical demonstration on synthetic data - not a regulated banking system.
+# Orchestrates Redis, PostgreSQL, FastAPI Backend, and React Vite Frontend.
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trustdesk_user
+      POSTGRES_PASSWORD: trustdesk_pass
+      POSTGRES_DB: trustdesk_db
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+psycopg2://trustdesk_user:trustdesk_pass@postgres:5432/trustdesk_db
+      TRUSTED_CHANNEL_TOKEN: trustdesk_local_demo_token
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
