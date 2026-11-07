@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
             "features": settings.features,
         }
 
-    @app.get("/favicon.ico", include_in_schema=False)
+    @app.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
     async def favicon():
         favicon_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist" / "favicon.svg"
         if favicon_path.exists():

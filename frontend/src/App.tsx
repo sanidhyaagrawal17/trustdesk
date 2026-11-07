@@ -96,69 +96,81 @@ export const App: React.FC = () => {
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
 
+      const processEventBlock = (eventBlock: string) => {
+        if (!eventBlock.trim()) return;
+
+        let eventType = 'message';
+        let dataStr = '';
+
+        const lines = eventBlock.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('event:')) {
+            eventType = trimmed.slice(6).trim();
+          } else if (trimmed.startsWith('data:')) {
+            const val = trimmed.slice(5).trim();
+            dataStr = dataStr ? `${dataStr}\n${val}` : val;
+          }
+        }
+
+        if (!dataStr) return;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+
+          if (eventType === 'token') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: msg.content + (parsed.token || '') }
+                  : msg
+              )
+            );
+          } else if (eventType === 'metadata') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      trace_id: parsed.trace_id,
+                      retriever_used: parsed.retriever_used,
+                      grounding_score: parsed.grounding_score,
+                      is_grounded: parsed.is_grounded,
+                      fallback_triggered: parsed.fallback_triggered,
+                      injection_detected: parsed.injection_detected,
+                    }
+                  : msg
+              )
+            );
+          } else if (eventType === 'done') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
+              )
+            );
+          }
+        } catch (e) {
+          console.warn('[SSE Parse Error]', e, eventBlock);
+        }
+      };
+
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split('\n\n');
+        // Handle both CRLF (\r\n\r\n) and LF (\n\n) SSE block delimiters
+        const events = buffer.split(/\r?\n\r?\n/);
         buffer = events.pop() || '';
 
         for (const eventBlock of events) {
-          if (!eventBlock.trim()) continue;
-
-          let eventType = 'message';
-          let dataStr = '';
-
-          const lines = eventBlock.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('event:')) {
-              eventType = line.replace('event:', '').trim();
-            } else if (line.startsWith('data:')) {
-              dataStr += line.replace('data:', '').trim();
-            }
-          }
-
-          if (!dataStr) continue;
-
-          try {
-            const parsed = JSON.parse(dataStr);
-
-            if (eventType === 'token') {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMessageId
-                    ? { ...msg, content: msg.content + (parsed.token || '') }
-                    : msg
-                )
-              );
-            } else if (eventType === 'metadata') {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMessageId
-                    ? {
-                        ...msg,
-                        trace_id: parsed.trace_id,
-                        retriever_used: parsed.retriever_used,
-                        grounding_score: parsed.grounding_score,
-                        is_grounded: parsed.is_grounded,
-                        fallback_triggered: parsed.fallback_triggered,
-                        injection_detected: parsed.injection_detected,
-                      }
-                    : msg
-                )
-              );
-            } else if (eventType === 'done') {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
-                )
-              );
-            }
-          } catch (e) {
-            // Ignore malformed partial chunks
-          }
+          processEventBlock(eventBlock);
         }
+      }
+
+      // Process any trailing event block when stream completes
+      if (buffer.trim()) {
+        processEventBlock(buffer);
       }
     } catch (err: any) {
       setMessages((prev) =>
@@ -175,6 +187,11 @@ export const App: React.FC = () => {
       );
     } finally {
       setIsStreaming(false);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
+        )
+      );
     }
   };
 
