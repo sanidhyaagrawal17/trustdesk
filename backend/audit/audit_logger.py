@@ -58,17 +58,8 @@ class DualModeAuditLogger:
                     metadata.create_all(self.engine)
                 self._backend_type = "postgresql"
             except Exception as exc:
-                # Handle Linux / GitHub Actions runner IPv6 'localhost' resolution by trying 127.0.0.1
-                if "localhost" in url:
-                    try:
-                        fallback_ipv4_url = url.replace("localhost", "127.0.0.1")
-                        self.engine = create_engine(fallback_ipv4_url, pool_pre_ping=True)
-                        with self.engine.connect() as conn:
-                            metadata.create_all(self.engine)
-                        self._backend_type = "postgresql"
-                        return
-                    except Exception:
-                        pass
+                if os.getenv("REQUIRE_INTEGRATION") == "1":
+                    raise exc
                 self.engine = create_engine(DEFAULT_SQLITE_URL, connect_args={"check_same_thread": False})
                 metadata.create_all(self.engine)
                 self._backend_type = "sqlite"
