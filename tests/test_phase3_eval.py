@@ -148,6 +148,21 @@ async def test_full_golden_set_dual_split_report():
     assert full_report["[Eval - Stress Test (10 Questions)]"]["total_questions"] == 10
 
 
+def test_independent_evaluation_suite_frozen_router():
+    """Verifies independent evaluation of 12 novel queries on frozen router.
+    Confirms out-of-scope performance (4/6) and documents keyword absence failure mode (0/6).
+    """
+    from backend.eval.independent_set import evaluate_independent_set_on_router
+
+    results = evaluate_independent_set_on_router()
+    assert results["total_queries"] == 12
+    assert results["out_of_scope_n"] == 6
+    assert results["in_domain_n"] == 6
+    assert results["out_of_scope_matched"] == 4
+    assert results["in_domain_matched"] == 0
+    assert results["overall_concordance"] == 0.3333
+
+
 # 4. CI Workflow Configuration Verification
 def test_ci_workflow_yaml_structure():
     """Verifies .github/workflows/ci.yml defines Redis and PostgreSQL service containers and markers."""

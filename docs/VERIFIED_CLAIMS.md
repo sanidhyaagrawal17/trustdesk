@@ -15,10 +15,12 @@
 | `CLAIM-RESILIENCE-01` | **Fault Tolerance & Dual-Mode Adapters** | Redis outage triggers automatic graceful fallback to thread-safe in-memory session store. | `test_redis_outage_graceful_fallback` |
 | `CLAIM-RESILIENCE-02` | **Fault Tolerance & Dual-Mode Adapters** | PostgreSQL outage triggers automatic graceful fallback to local SQLite audit logger. | `test_postgresql_outage_graceful_fallback` |
 | `CLAIM-RESILIENCE-03` | **Fault Tolerance & Dual-Mode Adapters** | Live storage adapter health status is exposed via /api/health, and connection failures log warning notices. | `test_health_endpoints_adapter_reporting` |
-| `CLAIM-SECURITY-06` | **Security & Privacy** | Held-out adversarial attacks and benign loan queries achieve 100% catch rate and 0.0% false-positive rate. | `test_held_out_injection_and_benign_catch_and_fp_rates` |
+| `CLAIM-SECURITY-06` | **Security & Privacy** | Benign loan queries with domain keywords achieve 0.0% false-positive rate under heuristic injection screening. | `test_held_out_injection_and_benign_catch_and_fp_rates` |
 | `CLAIM-STREAMING-01` | **API & Streaming** | SSE endpoint streams status, token, metadata, and done events with trace IDs. | `test_sse_chat_stream_protocol` |
 | `CLAIM-EVAL-01` | **Evaluation & Grounding** | Token-overlap grounding guardrail scores model claims against FAQ knowledge base. | `test_grounding_evaluator_high_overlap` |
-| `CLAIM-EVAL-02` | **Evaluation & Grounding** | Intent classifier is evaluated on synthetic test split and benchmarked against keyword baseline. | `test_intent_classifier_evaluation_metrics` |
+| `CLAIM-EVAL-02` | **Evaluation & Grounding** | Intent classifier is evaluated on synthetic test split and benchmarked against dual keyword baselines. | `test_intent_classifier_evaluation_metrics` |
+| `CLAIM-EVAL-03` | **Evaluation & Grounding** | 12-query independent evaluation suite benchmarks out-of-scope refusal (4/6) and zero-keyword fallback behavior (0/6) on frozen router. | `test_independent_evaluation_suite_frozen_router` |
+| `CLAIM-EVAL-04` | **Evaluation & Grounding** | 40-question golden set regression suite verifies routing, eligibility math, EMI calculation, and FAQ grounding (40/40 after fixes). | `test_golden_set_mock_llm_evaluation` |
 
 ## Non-Claims & Honest Architectural Gaps
 - **No gRPC**: Communications rely strictly on REST and SSE streaming.

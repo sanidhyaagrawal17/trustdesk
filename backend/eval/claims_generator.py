@@ -82,7 +82,7 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
         {
             "id": "CLAIM-SECURITY-06",
             "category": "Security & Privacy",
-            "claim": "Held-out adversarial attacks and benign loan queries achieve 100% catch rate and 0.0% false-positive rate.",
+            "claim": "Benign loan queries with domain keywords achieve 0.0% false-positive rate under heuristic injection screening.",
             "test_function": "test_held_out_injection_and_benign_catch_and_fp_rates",
             "test_module": "tests.test_phase5_fault_injection",
         },
@@ -103,8 +103,22 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
         {
             "id": "CLAIM-EVAL-02",
             "category": "Evaluation & Grounding",
-            "claim": "Intent classifier is evaluated on synthetic test split and benchmarked against keyword baseline.",
+            "claim": "Intent classifier is evaluated on synthetic test split and benchmarked against dual keyword baselines.",
             "test_function": "test_intent_classifier_evaluation_metrics",
+            "test_module": "tests.test_phase3_eval",
+        },
+        {
+            "id": "CLAIM-EVAL-03",
+            "category": "Evaluation & Grounding",
+            "claim": "12-query independent evaluation suite benchmarks out-of-scope refusal (4/6) and zero-keyword fallback behavior (0/6) on frozen router.",
+            "test_function": "test_independent_evaluation_suite_frozen_router",
+            "test_module": "tests.test_phase3_eval",
+        },
+        {
+            "id": "CLAIM-EVAL-04",
+            "category": "Evaluation & Grounding",
+            "claim": "40-question golden set regression suite verifies routing, eligibility math, EMI calculation, and FAQ grounding (40/40 after fixes).",
+            "test_function": "test_golden_set_mock_llm_evaluation",
             "test_module": "tests.test_phase3_eval",
         },
     ]
