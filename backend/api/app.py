@@ -2,8 +2,11 @@
 Technical demonstration on synthetic data - not a regulated banking system.
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.api.routes import router as api_router
 from backend.audit.audit_logger import audit_logger
@@ -43,6 +46,12 @@ def create_app() -> FastAPI:
         }
 
     app.include_router(api_router)
+
+    # Mount production React build if dist exists
+    dist_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+    if dist_dir.exists():
+        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="frontend")
+
     return app
 
 
