@@ -45,19 +45,57 @@ def create_app() -> FastAPI:
             "features": settings.features,
         }
 
+    dist_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
     @app.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
     async def favicon():
-        favicon_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist" / "favicon.svg"
+        favicon_path = dist_dir / "favicon.svg"
         if favicon_path.exists():
             from fastapi.responses import FileResponse
             return FileResponse(favicon_path, media_type="image/svg+xml")
         from fastapi.responses import Response
         return Response(status_code=204)
 
+    @app.get("/", include_in_schema=False)
+    @app.get("/index.html", include_in_schema=False)
+    async def serve_index():
+        index_file = dist_dir / "index.html"
+        if index_file.exists():
+            from fastapi.responses import FileResponse
+            return FileResponse(
+                index_file,
+                media_type="text/html",
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"status": "TrustDesk backend running. Build frontend with 'npm run build'."})
+
+    @app.api_route("/assets/{file_name}", methods=["GET", "HEAD"], include_in_schema=False)
+    async def serve_asset(file_name: str):
+        asset_path = dist_dir / "assets" / file_name
+        from fastapi.responses import FileResponse
+        if asset_path.exists():
+            media_type = "text/css" if file_name.endswith(".css") else ("application/javascript" if file_name.endswith(".js") else None)
+            return FileResponse(asset_path, media_type=media_type)
+        # Fallback to the latest CSS or JS asset if a cached browser requests an older asset hash
+        assets_dir = dist_dir / "assets"
+        if assets_dir.exists():
+            ext = ".css" if file_name.endswith(".css") else (".js" if file_name.endswith(".js") else None)
+            if ext:
+                matching = sorted(assets_dir.glob(f"*{ext}"), key=lambda p: p.stat().st_mtime, reverse=True)
+                if matching:
+                    media_type = "text/css" if ext == ".css" else "application/javascript"
+                    return FileResponse(matching[0], media_type=media_type)
+        from fastapi.responses import Response
+        return Response(status_code=404)
+
     app.include_router(api_router)
 
     # Mount compiled React build if dist exists
-    dist_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
     if dist_dir.exists():
         app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="frontend")
 
