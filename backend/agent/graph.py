@@ -146,17 +146,18 @@ def detect_intent_advanced_regex(query: str) -> str:
     return detect_intent_rule_based(query)
 
 
-def route_intent_hybrid(query: str) -> tuple[str, float, str]:
+def route_intent_hybrid(query: str) -> tuple[str, float | str, str]:
     """Hybrid intent router combining rule fast path, ML classifier probability,
     and ChromaDB dense retrieval distance.
     Returns: (intent, confidence, routing_path)
     Where intent is in: {"faq", "emi_calculation", "eligibility_check", "fallback", "clarify"}
+    Confidence for rule_fast_path is labeled "rule_match" rather than a probability.
     """
     q = query.lower().strip()
 
     # 1. Rule Fast Path: Empty, very short, or pure conversational greetings -> fallback
     if len(q) < 4 or re.match(r"^(?:hi|hello|hey|good\s+(?:morning|evening|afternoon)|bye|goodbye|namaste)(?:\s+.*)?$", q):
-        return "fallback", 1.0, "rule_fast_path"
+        return "fallback", "rule_match", "rule_fast_path"
 
     # Rule Fast Path: Explicit non-loan topics (weather, crypto, humor, programming, sports, trivia)
     out_of_scope_patterns = [
@@ -168,7 +169,7 @@ def route_intent_hybrid(query: str) -> tuple[str, float, str]:
         r"\b(?:capital\s+of|who\s+is|who\s+was|history\s+of|planet|recipe)\b",
     ]
     if any(re.search(pat, q) for pat in out_of_scope_patterns):
-        return "fallback", 1.0, "rule_fast_path"
+        return "fallback", "rule_match", "rule_fast_path"
 
     # Non-loan banking and investment concepts that should route to fallback (refusal)
     non_loan_banking_patterns = [
@@ -198,7 +199,7 @@ def route_intent_hybrid(query: str) -> tuple[str, float, str]:
     ]
     is_missed_payment = bool(re.search(r"\b(?:missed|bounce|late|penalty|charges?|consequence)\b", q))
     if any(re.search(pat, q) for pat in emi_fast) and (has_digits or has_amount_words) and not is_missed_payment:
-        return "emi_calculation", 1.0, "rule_fast_path"
+        return "emi_calculation", "rule_match", "rule_fast_path"
 
     # Fast Path: Clear Eligibility with criteria keywords
     elig_fast = [
@@ -212,7 +213,7 @@ def route_intent_hybrid(query: str) -> tuple[str, float, str]:
         r"\bkya.*eligible\b",
     ]
     if any(re.search(pat, q) for pat in elig_fast):
-        return "eligibility_check", 1.0, "rule_fast_path"
+        return "eligibility_check", "rule_match", "rule_fast_path"
 
     # Fast Path: Clear Loan Domain FAQs
     loan_faq_fast = [
@@ -235,7 +236,7 @@ def route_intent_hybrid(query: str) -> tuple[str, float, str]:
         r"\bmissed\b",
     ]
     if any(re.search(pat, q) for pat in loan_faq_fast):
-        return "faq", 1.0, "rule_fast_path"
+        return "faq", "rule_match", "rule_fast_path"
 
     # 2. Classifier probability + Retrieval similarity
     from backend.ml.intent_classifier import intent_classifier

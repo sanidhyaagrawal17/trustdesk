@@ -164,8 +164,8 @@ def test_independent_evaluation_suite_frozen_router():
 
 
 def test_independent_20_query_evaluation_before_and_after_hybrid_router():
-    """Verifies evaluation of 20 novel queries before (rule router) and after (hybrid router).
-    Demonstrates jump from 9/20 (45.0%) to 17/20 (85.0%) direct matches + 3/20 clarifying questions.
+    """Verifies evaluation of 20 development queries before (rule router) and after (hybrid router).
+    Demonstrates jump from 9/20 (45.0%) to 17 direct, 3 clarifying, and 0 misrouted.
     """
     from backend.eval.independent_set_20 import evaluate_independent_20_on_router
     from backend.agent.graph import detect_intent_rule_based, route_intent_hybrid
@@ -176,7 +176,7 @@ def test_independent_20_query_evaluation_before_and_after_hybrid_router():
     assert res_before["matched_count"] == 9
     assert res_before["concordance_rate"] == 0.45
 
-    # After change (hybrid router)
+    # After change (hybrid router): 17 direct matches, 3 clarifying, 0 misrouted
     def hybrid_adapter(q: str) -> str:
         intent, _conf, _path = route_intent_hybrid(q)
         return intent
@@ -185,6 +185,11 @@ def test_independent_20_query_evaluation_before_and_after_hybrid_router():
     assert res_after["total_queries"] == 20
     assert res_after["matched_count"] == 17
     assert res_after["concordance_rate"] == 0.85
+
+    clarified = [r for r in res_after["results"] if r["predicted"] == "clarify"]
+    misrouted = [r for r in res_after["results"] if r["predicted"] != "clarify" and not r["matched"]]
+    assert len(clarified) == 3
+    assert len(misrouted) == 0
 
 
 @pytest.mark.asyncio

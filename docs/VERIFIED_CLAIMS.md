@@ -19,9 +19,9 @@
 | `CLAIM-STREAMING-01` | **API & Streaming** | SSE endpoint streams status, token, metadata, and done events with trace IDs. | `test_sse_chat_stream_protocol` |
 | `CLAIM-EVAL-01` | **Evaluation & Grounding** | Token-overlap grounding guardrail scores model claims against FAQ knowledge base. | `test_grounding_evaluator_high_overlap` |
 | `CLAIM-EVAL-02` | **Evaluation & Grounding** | Intent classifier is evaluated on synthetic test split and benchmarked against dual keyword baselines. | `test_intent_classifier_evaluation_metrics` |
-| `CLAIM-EVAL-03` | **Evaluation & Grounding** | 12-query independent evaluation suite benchmarks out-of-scope refusal (4/6) and zero-keyword fallback behavior (0/6) on frozen router. | `test_independent_evaluation_suite_frozen_router` |
+| `CLAIM-EVAL-03` | **Evaluation & Grounding** | 12-query development diagnostic set benchmarks out-of-scope refusal (4/6) and zero-keyword fallback behavior (0/6) under rule routing. | `test_independent_evaluation_suite_frozen_router` |
 | `CLAIM-EVAL-04` | **Evaluation & Grounding** | 40-question golden set regression suite verifies routing, eligibility math, EMI calculation, and FAQ grounding (40/40 after fixes). | `test_golden_set_mock_llm_evaluation` |
-| `CLAIM-EVAL-05` | **Evaluation & Grounding** | Hybrid intent router combining rule fast path, classifier probabilities, and Chroma retrieval elevates 20-query concordance from 45% to 85% with low-confidence clarification. | `test_independent_20_query_evaluation_before_and_after_hybrid_router` |
+| `CLAIM-EVAL-05` | **Evaluation & Grounding** | Hybrid intent router combining rule fast path, classifier probabilities, and Chroma retrieval evaluates 20-query development set with 17 direct matches, 3 clarifying questions, and 0 misrouted. | `test_independent_20_query_evaluation_before_and_after_hybrid_router` |
 | `CLAIM-ROUTER-01` | **Agent Routing & Loop** | Low-confidence queries return interactive clarifying questions rather than outright refusals. | `test_low_confidence_query_returns_clarifying_question` |
 
 ## Non-Claims & Honest Architectural Gaps

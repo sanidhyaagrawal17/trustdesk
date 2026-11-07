@@ -1,5 +1,5 @@
-"""Independent 12-Query Evaluation Suite for TrustDesk.
-Evaluated strictly against the FROZEN intent router without post-hoc tuning.
+"""12-Query Development Diagnostic Suite for TrustDesk.
+Evaluated as a development diagnostic set to benchmark rule, classifier, and vector similarities.
 Contains:
   - 6 Out-of-Scope Borderline / Loan-Adjacent Queries (Expected: fallback)
   - 6 In-Domain Queries with Unusual / Zero-Keyword Phrasing (Expected: in-domain tools)

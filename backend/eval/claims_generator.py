@@ -110,7 +110,7 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
         {
             "id": "CLAIM-EVAL-03",
             "category": "Evaluation & Grounding",
-            "claim": "12-query independent evaluation suite benchmarks out-of-scope refusal (4/6) and zero-keyword fallback behavior (0/6) on frozen router.",
+            "claim": "12-query development diagnostic set benchmarks out-of-scope refusal (4/6) and zero-keyword fallback behavior (0/6) under rule routing.",
             "test_function": "test_independent_evaluation_suite_frozen_router",
             "test_module": "tests.test_phase3_eval",
         },
@@ -124,7 +124,7 @@ def get_verified_claims_catalog() -> List[Dict[str, Any]]:
         {
             "id": "CLAIM-EVAL-05",
             "category": "Evaluation & Grounding",
-            "claim": "Hybrid intent router combining rule fast path, classifier probabilities, and Chroma retrieval elevates 20-query concordance from 45% to 85% with low-confidence clarification.",
+            "claim": "Hybrid intent router combining rule fast path, classifier probabilities, and Chroma retrieval evaluates 20-query development set with 17 direct matches, 3 clarifying questions, and 0 misrouted.",
             "test_function": "test_independent_20_query_evaluation_before_and_after_hybrid_router",
             "test_module": "tests.test_phase3_eval",
         },

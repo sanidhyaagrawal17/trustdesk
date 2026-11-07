@@ -123,9 +123,9 @@ Diagnostic Stress Suite Concordance: **100.0% (10/10)**, Injections Intercepted:
 
 ---
 
-## Diagnostic Evaluation of Three Routers ($N=12$)
+## 12-Query Development Diagnostic Set ($N=12$)
 
-The 12 novel queries were retained as a diagnostic suite to evaluate the offline performance of three distinct routing mechanisms without tuning: the Rule-Based Router, the ML Intent Classifier (`TfidfVectorizer` + `LogisticRegression`), and a dense Chroma-Similarity Gate (top FAQ distance threshold $d \le 1.25$ selected strictly on the training data):
+The 12 queries served as a **development diagnostic set** to evaluate the offline performance of three distinct routing mechanisms without initial tuning: the Rule-Based Router, the ML Intent Classifier (`TfidfVectorizer` + `LogisticRegression`), and a dense Chroma-Similarity Gate ($d \le 1.25$ selected strictly on the training data). The router was subsequently modified after observing its failures on this set and the 20-query development suite:
 
 | ID | Expected Category | Rule-Based Router | ML Intent Classifier | Dense Chroma Gate ($d \le 1.25$) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -149,13 +149,28 @@ The 12 novel queries were retained as a diagnostic suite to evaluate the offline
 
 ---
 
-## Independent Evaluation Suite ($N=20$) - Before vs. After Hybrid Router
+## 20-Query Development Set ($N=20$) - Before vs. After Hybrid Router
 
-BEFORE implementing the hybrid router, 20 novel independent queries were authored and their expected labels fixed across 4 categories (5 Hinglish, 5 Typo, 5 Zero-Keyword In-Domain, and 5 Borderline Out-of-Scope).
+BEFORE implementing the hybrid router, 20 queries were authored across 4 categories (5 Hinglish, 5 Typo, 5 Zero-Keyword In-Domain, and 5 Borderline Out-of-Scope) to serve as a **development set**. The router architecture, regex patterns, and distance thresholds were iteratively refined after observing their initial failures on this benchmark.
+
+### Patterns and Thresholds Refined After Observing Development Set Failures
+1. **Negative Non-Loan Banking Filter (`non_loan_banking_patterns`)**: Added explicit rejection rules for non-loan financial concepts (Demat/trading, ATM/PIN reset, UPI disputes, SWIFT transfers, fixed/recurring deposits, Form 15G/15H TDS, mutual funds/SIPs, repo rate, and savings account nominee modifications). This prevents non-loan banking topics from spuriously triggering loan FAQ or eligibility tools.
+2. **Refined Out-of-Scope Code Regex**: Removed bare `software` from general refusal rules, replacing it with coding-specific tokens (`coding`, `programming`, `algorithm`, `html`, `css`, `python`, `javascript`). This ensures applicant professions such as "software developer" (`new-20-14`) are not falsely rejected as programming queries.
+3. **Missed Payment FAQ Guard**: Added `is_missed_payment` detection (`missed|bounce|late|penalty`) so queries regarding consequences of missing an EMI installment route to FAQ policy guidance instead of triggering the numeric EMI calculator.
+4. **Typo & Hindi Denomination Stems**: Added flexible stem patterns (`calc[a-z]*`, `inst[a-z]*`, `elig[a-z]*`, `elgb[a-z]*`, `qualif[a-z]*`) and Hindi currency words (`lakh`, `crore`, `hazar`).
+5. **Chroma Distance Threshold Shift ($d \le 1.25 \rightarrow d \le 1.28$)**:
+   - On synthetic training data: FAQs had nearest-neighbor distance $d \le 1.1878$ (median 0.47), whereas training fallback questions had $d \ge 1.4097$.
+   - On development queries: Legitimate in-domain inquiries using real-estate vocabulary without standard loan keywords (e.g., `new-20-11`: *"Does your platform offer financial assistance for purchasing agricultural farmland in MP?"*) yielded a nearest FAQ distance of $d = 1.274$, falling just outside the rigid 1.25 cutoff.
+   - Adjusting the boundary to $d \le 1.28$ admits farmland and plot inquiries into FAQ routing while preserving 100% rejection on non-loan financial queries, all of which remain safely separated at $d \ge 1.33$.
+
+### Rule Match Confidence Representation
+Deterministic keyword and regex fast-path matches return `"rule_match"` rather than a numerical float like `1.0` or `100%`. Fast-path pattern hits are deterministic checks rather than calibrated posterior probabilities.
+
+### Development Set Results ($N=20$)
 
 Evaluating the 20 queries on the original Rule-Based Router yielded **9/20 (45.0%)** with severe misroutes (e.g. fixed deposit premature withdrawal routed to FAQ, Form 15G routed to eligibility check).
 
-After implementing the **Hybrid Intent Router** (combining rule fast path for explicit tool requests, classifier probabilities, Chroma dense semantic retrieval, and low-confidence interactive clarifying questions), performance jumped to **17/20 (85.0%) direct matches** and **3/20 (15.0%) clarifying questions**, with **0 misroutes**:
+After implementing the **Hybrid Intent Router** (combining rule fast path for explicit tool requests, classifier probabilities, Chroma dense semantic retrieval, and low-confidence interactive clarifying questions), performance reached **17 direct, 3 clarifying, 0 misrouted**:
 
 | ID | Category | Query Text | Expected | Rule Router (Before) | Hybrid Router (After) | Status (After) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -164,15 +179,15 @@ After implementing the **Hybrid Intent Router** (combining rule fast path for ex
 | `new-20-03` | Hinglish Eligibility | *"Tees saal umar hai aur mahine ki kamai assi hazar hai, kya approval mil jayega?"* | `eligibility_check` | `fallback` (Fail) | `eligibility_check` (Conf 0.85) | Pass |
 | `new-20-04` | Hinglish Out-of-Scope | *"Apne savings khate me nominee ka naam kaise change kar sakte hain online?"* | `fallback` | `fallback` | `fallback` (Conf 0.95) | Pass |
 | `new-20-05` | Hinglish Out-of-Scope | *"Mutual fund me har mahine paanch hazar SIP shuru karni hai, kaunsa fund best hai?"* | `fallback` | `fallback` | `fallback` (Conf 0.95) | Pass |
-| `new-20-06` | Typo FAQ | *"Whut are the prepaymnt rulz and penlty for prepaying hom lon early?"* | `faq` | `faq` | `faq` (Conf 0.39) | Pass |
-| `new-20-07` | Typo EMI | *"Plz calcualte mothly instllment for 600000 at 10% for 36 mnths"* | `emi_calculation` | `fallback` (Fail) | `emi_calculation` (Conf 1.00) | Pass |
-| `new-20-08` | Typo Eligibility | *"Check my elgblty: my ag is 27 and net salry is 45000 with zero liabilitis"* | `eligibility_check` | `eligibility_check` | `eligibility_check` (Conf 1.00) | Pass |
+| `new-20-06` | Typo FAQ | *"Whut are the prepaymnt rulz and penlty for prepaying hom lon early?"* | `faq` | `faq` | `faq` (rule_match) | Pass |
+| `new-20-07` | Typo EMI | *"Plz calcualte mothly instllment for 600000 at 10% for 36 mnths"* | `emi_calculation` | `fallback` (Fail) | `emi_calculation` (rule_match) | Pass |
+| `new-20-08` | Typo Eligibility | *"Check my elgblty: my ag is 27 and net salry is 45000 with zero liabilitis"* | `eligibility_check` | `eligibility_check` | `eligibility_check` (rule_match) | Pass |
 | `new-20-09` | Typo Out-of-Scope | *"How to rest my ATM debitt card PIN numbr via mobile appp?"* | `fallback` | `fallback` | `fallback` (Conf 0.95) | Pass |
 | `new-20-10` | Typo Out-of-Scope | *"Wht is the intrest rate on recurring depost acount for seniior citzens?"* | `fallback` | `faq` (Fail) | `fallback` (Conf 0.70) | Pass |
 | `new-20-11` | Zero-Keyword FAQ | *"Does your platform offer financial assistance for purchasing agricultural farmland in MP?"* | `faq` | `fallback` (Fail) | `faq` (Conf 0.37) | Pass |
 | `new-20-12` | Zero-Keyword FAQ | *"What is the document validation timeline before funds are transferred to the builder?"* | `faq` | `faq` | `clarify` (Conf 0.50) | Interactive Clarification |
-| `new-20-13` | Zero-Keyword EMI | *"I need 1500000 for 120 months at 8.75%, break down my scheduled recurring monthly charge"* | `emi_calculation` | `faq` (Fail) | `emi_calculation` (Conf 1.00) | Pass |
-| `new-20-14` | Zero-Keyword Eligibility | *"A 24-year-old software developer taking home sixty thousand with zero debts wants to know if they qualify"* | `eligibility_check` | `fallback` (Fail) | `eligibility_check` (Conf 1.00) | Pass |
+| `new-20-13` | Zero-Keyword EMI | *"I need 1500000 for 120 months at 8.75%, break down my scheduled recurring monthly charge"* | `emi_calculation` | `faq` (Fail) | `emi_calculation` (Conf 0.85) | Pass |
+| `new-20-14` | Zero-Keyword Eligibility | *"A 24-year-old software developer taking home sixty thousand with zero debts wants to know if they qualify"* | `eligibility_check` | `fallback` (Fail) | `eligibility_check` (rule_match) | Pass |
 | `new-20-15` | Zero-Keyword FAQ | *"Is a title search report required for freehold commercial plots before financing?"* | `faq` | `fallback` (Fail) | `clarify` (Conf 0.50) | Interactive Clarification |
 | `new-20-16` | Borderline Out-of-Scope | *"How do I dispute a fraudulent UPI transaction sent to an unknown mobile number?"* | `fallback` | `fallback` | `fallback` (Conf 0.95) | Pass |
 | `new-20-17` | Borderline Out-of-Scope | *"Can I convert physical gold jewelry into digital gold certificates at your branch?"* | `fallback` | `faq` (Fail) | `fallback` (Conf 0.95) | Pass |
@@ -182,7 +197,7 @@ After implementing the **Hybrid Intent Router** (combining rule fast path for ex
 
 ### Summary Comparison ($N=20$)
 - **Before (Rule-Based Router)**: **9/20 passed (45.0%)**. 11 queries failed due to keyword blindness or substring false positives.
-- **After (Hybrid Intent Router)**: **17/20 direct matches (85.0%)** + **3/20 clarifying questions (15.0%)**. Ambiguous zero-keyword inputs receive helpful clarification instead of an abrupt refusal. Direct erroneous misroutes were reduced to **0/20 (0.0%)**.
+- **After (Hybrid Intent Router)**: **17 direct, 3 clarifying, 0 misrouted** (17/20 direct matches, 3/20 interactive clarifications, 0 erroneous misroutes).
 
 ---
 

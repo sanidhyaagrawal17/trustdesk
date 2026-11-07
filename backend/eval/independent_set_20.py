@@ -1,5 +1,5 @@
-"""Independent 20-Query Evaluation Suite for TrustDesk.
-Authored and frozen BEFORE modifying the agent intent router.
+"""20-Query Development Evaluation Suite for TrustDesk.
+Evaluated as a development benchmark before and after implementing the hybrid router.
 Contains:
   - 5 Hinglish queries (in-domain & out-of-scope)
   - 5 Typo queries (in-domain & out-of-scope)
