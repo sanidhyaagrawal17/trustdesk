@@ -1,8 +1,8 @@
 import React from 'react';
 
-export const Banner: React.FC = () => {
+export const Banner: React.FC = React.memo(() => {
   return (
-    <div className="w-full bg-zinc-900 border-b border-zinc-800 px-4 py-2 text-xs">
+    <div className="w-full bg-zinc-900 border-b border-zinc-800 px-4 py-2 text-xs" role="region" aria-label="Demo status banner">
       <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center px-2 py-0.5 rounded font-mono text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -27,4 +27,4 @@ export const Banner: React.FC = () => {
       </div>
     </div>
   );
-};
+});

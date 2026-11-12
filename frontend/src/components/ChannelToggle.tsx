@@ -9,7 +9,7 @@ interface ChannelToggleProps {
   disabled?: boolean;
 }
 
-export const ChannelToggle: React.FC<ChannelToggleProps> = ({
+export const ChannelToggle: React.FC<ChannelToggleProps> = React.memo(({
   channel,
   bearerToken,
   onChannelChange,
@@ -17,16 +17,17 @@ export const ChannelToggle: React.FC<ChannelToggleProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg p-3 text-sm">
+    <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg p-3 text-sm" role="region" aria-label="Execution Channel Selector">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-zinc-400 font-medium text-xs uppercase tracking-wider">
+          <span className="text-zinc-400 font-medium text-xs uppercase tracking-wider" id="execution-channel-label">
             Execution Channel:
           </span>
-          <div className="inline-flex rounded-md p-0.5 bg-zinc-950 border border-zinc-800">
+          <div className="inline-flex rounded-md p-0.5 bg-zinc-950 border border-zinc-800" role="group" aria-labelledby="execution-channel-label">
             <button
               type="button"
               disabled={disabled}
+              aria-pressed={channel === 'untrusted'}
               onClick={() => onChannelChange('untrusted')}
               className={`px-3 py-1 rounded text-xs font-medium transition-all ${
                 channel === 'untrusted'
@@ -39,6 +40,7 @@ export const ChannelToggle: React.FC<ChannelToggleProps> = ({
             <button
               type="button"
               disabled={disabled}
+              aria-pressed={channel === 'trusted'}
               onClick={() => onChannelChange('trusted')}
               className={`px-3 py-1 rounded text-xs font-medium transition-all ${
                 channel === 'trusted'
@@ -62,6 +64,7 @@ export const ChannelToggle: React.FC<ChannelToggleProps> = ({
               placeholder="Enter Bearer token (TRUSTED_CHANNEL_SECRET)..."
               value={bearerToken}
               disabled={disabled}
+              aria-label="Trusted channel Bearer token"
               onChange={(e) => onBearerTokenChange(e.target.value)}
               className="w-full px-2.5 py-1 text-xs bg-zinc-950 border border-zinc-800 rounded font-mono text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-blue-500 transition-colors"
             />
@@ -73,4 +76,4 @@ export const ChannelToggle: React.FC<ChannelToggleProps> = ({
       </div>
     </div>
   );
-};
+});

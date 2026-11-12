@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Banner } from './components/Banner';
 import { ChannelToggle } from './components/ChannelToggle';
 import { ChatMessageItem } from './components/ChatMessageItem';
@@ -17,6 +17,7 @@ export const App: React.FC = () => {
     `session-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`
   );
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -24,7 +25,23 @@ export const App: React.FC = () => {
     }
   }, [messages, isStreaming]);
 
-  const handleSendMessage = async (rawQuery: string) => {
+  const handleChannelChange = useCallback((newChannel: ChannelType) => {
+    setChannel(newChannel);
+  }, []);
+
+  const handleBearerTokenChange = useCallback((token: string) => {
+    setBearerToken(token);
+  }, []);
+
+  const handleStopStreaming = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  }, []);
+
+  const handleSendMessage = useCallback(async (rawQuery: string) => {
     if (isStreaming || !rawQuery.trim()) return;
 
     const userMessageId = `user-${Date.now()}`;
@@ -50,6 +67,9 @@ export const App: React.FC = () => {
     setMessages((prev) => [...prev, userMsg, initialAsstMsg]);
     setIsStreaming(true);
 
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -66,6 +86,7 @@ export const App: React.FC = () => {
           session_id: sessionIdRef.current,
           channel,
         }),
+        signal: abortController.signal,
       });
 
       if (response.status === 401) {
@@ -173,35 +194,50 @@ export const App: React.FC = () => {
         processEventBlock(buffer);
       }
     } catch (err: any) {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === assistantMessageId
-            ? {
-                ...msg,
-                content: `Network / Gateway Error: ${err.message || 'Stream interrupted'}.`,
-                isStreaming: false,
-                fallback_triggered: true,
-              }
-            : msg
-        )
-      );
+      if (err.name === 'AbortError') {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: msg.content ? `${msg.content} [Generation stopped by user]` : 'Generation stopped.',
+                  isStreaming: false,
+                }
+              : msg
+          )
+        );
+      } else {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: `Network / Gateway Error: ${err.message || 'Stream interrupted'}.`,
+                  isStreaming: false,
+                  fallback_triggered: true,
+                }
+              : msg
+          )
+        );
+      }
     } finally {
       setIsStreaming(false);
+      abortControllerRef.current = null;
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
         )
       );
     }
-  };
+  }, [channel, bearerToken, isStreaming]);
 
-  const handleClearChat = () => {
+  const handleClearChat = useCallback(() => {
     if (isStreaming) return;
     setMessages([]);
     sessionIdRef.current = `session-${Date.now().toString(36)}-${Math.random()
       .toString(36)
       .substring(2, 7)}`;
-  };
+  }, [isStreaming]);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
@@ -238,6 +274,7 @@ export const App: React.FC = () => {
               type="button"
               onClick={handleClearChat}
               disabled={isStreaming || messages.length === 0}
+              aria-label="Reset current chat session"
               className="px-2.5 py-1 text-xs font-medium rounded text-zinc-400 hover:text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition-colors disabled:opacity-40"
             >
               Reset Session
@@ -245,6 +282,7 @@ export const App: React.FC = () => {
             <button
               type="button"
               onClick={() => setMetricsOpen(true)}
+              aria-label="Open runtime telemetry drawer"
               className="px-2.5 py-1 text-xs font-medium rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 transition-colors flex items-center gap-1.5"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
@@ -261,8 +299,8 @@ export const App: React.FC = () => {
           <ChannelToggle
             channel={channel}
             bearerToken={bearerToken}
-            onChannelChange={setChannel}
-            onBearerTokenChange={setBearerToken}
+            onChannelChange={handleChannelChange}
+            onBearerTokenChange={handleBearerTokenChange}
             disabled={isStreaming}
           />
         </div>
@@ -270,6 +308,10 @@ export const App: React.FC = () => {
         {/* Message Thread */}
         <div
           ref={chatScrollRef}
+          role="log"
+          aria-live="polite"
+          aria-atomic="false"
+          aria-label="Chat message thread"
           className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent min-h-0"
         >
           {messages.length === 0 ? (
@@ -298,7 +340,12 @@ export const App: React.FC = () => {
 
         {/* Bottom Input Area */}
         <div className="pt-2 shrink-0 border-t border-zinc-900">
-          <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            onStopStreaming={handleStopStreaming}
+            disabled={isStreaming}
+            isStreaming={isStreaming}
+          />
         </div>
       </main>
 

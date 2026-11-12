@@ -5,11 +5,12 @@ interface ChatMessageItemProps {
   message: ChatMessage;
 }
 
-export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message }) => {
+export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({ message }) => {
   const isUser = message.role === 'user';
 
   return (
-    <div
+    <article
+      aria-label={isUser ? 'User message' : 'TrustDesk assistant response'}
       className={`flex flex-col gap-2 py-3 px-4 rounded-xl transition-colors ${
         isUser
           ? 'bg-zinc-900/60 border border-zinc-800/80 ml-8 sm:ml-16'
@@ -45,7 +46,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message }) => 
       <div className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap font-sans">
         {message.content}
         {message.isStreaming && (
-          <span className="inline-block w-1.5 h-4 ml-1 bg-blue-500 animate-pulse align-middle" />
+          <span className="inline-block w-1.5 h-4 ml-1 bg-blue-500 animate-pulse align-middle" aria-hidden="true" />
         )}
       </div>
 
@@ -90,6 +91,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message }) => 
           )}
         </div>
       )}
-    </div>
+    </article>
   );
-};
+});

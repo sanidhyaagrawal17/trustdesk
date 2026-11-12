@@ -2,7 +2,9 @@ import React, { useState, KeyboardEvent } from 'react';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
+  onStopStreaming?: () => void;
   disabled?: boolean;
+  isStreaming?: boolean;
 }
 
 const SUGGESTIONS = [
@@ -28,12 +30,17 @@ const SUGGESTIONS = [
   },
 ];
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = false }) => {
+export const ChatInput: React.FC<ChatInputProps> = React.memo(({
+  onSendMessage,
+  onStopStreaming,
+  disabled = false,
+  isStreaming = false,
+}) => {
   const [text, setText] = useState('');
 
   const handleSend = () => {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled || isStreaming) return;
     onSendMessage(trimmed);
     setText('');
   };
@@ -46,14 +53,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = 
   };
 
   return (
-    <div className="flex flex-col gap-2 pt-2">
+    <div className="flex flex-col gap-2 pt-2" role="region" aria-label="Chat input and sample queries">
       <div className="flex flex-wrap items-center gap-1.5 pb-1">
         <span className="text-[11px] font-mono text-zinc-500 mr-1">Try sample:</span>
         {SUGGESTIONS.map((item, idx) => (
           <button
             key={idx}
             type="button"
-            disabled={disabled}
+            disabled={disabled || isStreaming}
             onClick={() => onSendMessage(item.text)}
             className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors disabled:opacity-50"
           >
@@ -66,20 +73,33 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = 
         <textarea
           rows={2}
           value={text}
-          disabled={disabled}
+          disabled={disabled || isStreaming}
+          aria-label="Ask a loan question"
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask a synthetic loan FAQ, calculate EMI, or check synthetic eligibility..."
           className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 resize-none focus:outline-none px-2 py-1 leading-relaxed font-sans"
         />
-        <button
-          type="button"
-          disabled={disabled || !text.trim()}
-          onClick={handleSend}
-          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 text-white disabled:text-zinc-500 text-xs font-medium font-sans transition-all flex items-center justify-center shrink-0 disabled:cursor-not-allowed shadow-sm"
-        >
-          {disabled ? 'Streaming...' : 'Send Query'}
-        </button>
+        {isStreaming && onStopStreaming ? (
+          <button
+            type="button"
+            onClick={onStopStreaming}
+            aria-label="Stop generating response"
+            className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium font-sans transition-all flex items-center justify-center shrink-0 shadow-sm"
+          >
+            Stop
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={disabled || isStreaming || !text.trim()}
+            onClick={handleSend}
+            aria-label="Send query"
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 text-white disabled:text-zinc-500 text-xs font-medium font-sans transition-all flex items-center justify-center shrink-0 disabled:cursor-not-allowed shadow-sm"
+          >
+            Send Query
+          </button>
+        )}
       </div>
       <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1 font-mono">
         <span>Press Enter to send, Shift+Enter for new line</span>
@@ -87,4 +107,4 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = 
       </div>
     </div>
   );
-};
+});

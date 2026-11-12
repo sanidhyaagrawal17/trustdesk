@@ -59,6 +59,7 @@ export const MetricsDrawer: React.FC<MetricsDrawerProps> = ({ isOpen, onClose })
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close telemetry drawer"
             className="text-zinc-400 hover:text-zinc-100 p-1 rounded hover:bg-zinc-900 transition-colors text-sm"
           >
             ✕
