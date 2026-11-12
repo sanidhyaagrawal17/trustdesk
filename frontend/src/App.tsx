@@ -25,6 +25,15 @@ export const App: React.FC = () => {
     }
   }, [messages, isStreaming]);
 
+  // Clean up active streaming request if component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleChannelChange = useCallback((newChannel: ChannelType) => {
     setChannel(newChannel);
   }, []);
