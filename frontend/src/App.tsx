@@ -269,21 +269,21 @@ export const App: React.FC = () => {
                   v0.1.0-synthetic
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-500 font-mono">
+              <p className="text-[11px] text-zinc-400 font-mono">
                 LangGraph Agent • Dual-Mode Storage • 5-Step PII Guardrail
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-zinc-500 hidden md:inline">
+            <span className="font-mono text-[11px] text-zinc-400 hidden md:inline">
               Session: {sessionIdRef.current.substring(0, 16)}...
             </span>
             <button
               type="button"
               onClick={handleClearChat}
               disabled={isStreaming || messages.length === 0}
-              aria-label="Reset current chat session"
+              aria-label="Reset Session - clear current chat thread"
               className="px-2.5 py-1 text-xs font-medium rounded text-zinc-400 hover:text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition-colors disabled:opacity-40"
             >
               Reset Session
@@ -291,7 +291,7 @@ export const App: React.FC = () => {
             <button
               type="button"
               onClick={() => setMetricsOpen(true)}
-              aria-label="Open runtime telemetry drawer"
+              aria-label="Runtime Telemetry - open diagnostics drawer"
               className="px-2.5 py-1 text-xs font-medium rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 transition-colors flex items-center gap-1.5"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
@@ -329,16 +329,16 @@ export const App: React.FC = () => {
                 TD
               </div>
               <div className="max-w-md space-y-1">
-                <h3 className="text-zinc-200 text-sm font-semibold">
+                <h2 className="text-zinc-200 text-sm font-semibold">
                   Synthetic Loan-FAQ Conversational Assistant
-                </h3>
+                </h2>
                 <p className="text-xs text-zinc-400 leading-relaxed">
                   Demonstrates real LangGraph agent loops, dense ChromaDB retrieval with TF-IDF fallback,
                   5-step PII masking (Luhn card, Aadhaar, mobile, PAN, email), heuristic injection defense,
                   and SSE token streaming.
                 </p>
               </div>
-              <div className="text-[11px] font-mono text-zinc-600">
+              <div className="text-[11px] font-mono text-zinc-400">
                 Notice: All numbers and rates are synthetic demonstration data.
               </div>
             </div>

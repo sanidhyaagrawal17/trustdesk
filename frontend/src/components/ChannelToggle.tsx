@@ -54,7 +54,7 @@ export const ChannelToggle: React.FC<ChannelToggleProps> = React.memo(({
         </div>
 
         {channel === 'untrusted' ? (
-          <div className="text-xs text-zinc-500 font-mono">
+          <div className="text-xs text-zinc-400 font-mono">
             Mode: Restricted tools • Full 5-step PII masking • Anonymous access
           </div>
         ) : (

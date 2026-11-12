@@ -55,7 +55,7 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   return (
     <div className="flex flex-col gap-2 pt-2" role="region" aria-label="Chat input and sample queries">
       <div className="flex flex-wrap items-center gap-1.5 pb-1">
-        <span className="text-[11px] font-mono text-zinc-500 mr-1">Try sample:</span>
+        <span className="text-[11px] font-mono text-zinc-400 mr-1">Try sample:</span>
         {SUGGESTIONS.map((item, idx) => (
           <button
             key={idx}
@@ -101,7 +101,7 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
           </button>
         )}
       </div>
-      <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1 font-mono">
+      <div className="flex items-center justify-between text-[11px] text-zinc-400 px-1 font-mono">
         <span>Press Enter to send, Shift+Enter for new line</span>
         <span>5-Step PII Masking Active</span>
       </div>
