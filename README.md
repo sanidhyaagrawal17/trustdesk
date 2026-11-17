@@ -7,9 +7,9 @@ TrustDesk is a loan-FAQ conversational assistant built on synthetic data, design
 - **Agent Routing (Hybrid Intent Architecture)**:
   - Built using the real LangGraph library (`StateGraph`, `END`) with a multi-tier hybrid decision pipeline:
     1. **Rule Fast Path**: Immediate routing for clear, unambiguous tool requests (e.g., explicit EMI calculations with numbers, eligibility checks with age/salary criteria, obvious out-of-scope topics, and greetings).
-    2. **Classifier Probability + Dense Retrieval Path**: When fast path rules do not fire, the system evaluates the statistical ML classifier probability distribution alongside real ChromaDB dense semantic retrieval distance. Semantic proximity ($d \le 1.28$) confirms loan FAQ relevance, while recognized non-loan banking concepts (Demat, ATM PIN, UPI fraud, SWIFT, Form 15G, SIP/mutual funds, repo rate) are steered to fallback refusal.
+    2. **Classifier Probability + Dense Retrieval Path**: When fast path rules do not fire, the system evaluates the statistical ML classifier probability distribution alongside real ChromaDB dense semantic retrieval distance. Semantic proximity (`d <= 1.28`) confirms loan FAQ relevance, while recognized non-loan banking concepts (Demat, ATM PIN, UPI fraud, SWIFT, Form 15G, SIP/mutual funds, repo rate) are steered to fallback refusal.
     3. **Low-Confidence Interactive Clarification**: Borderline or ambiguous queries trigger an interactive **clarifying question** asking the user to specify whether they require loan interest rates, EMI installments, or applicant eligibility, rather than returning an outright refusal.
-- **FAQ Retrieval**: Real ChromaDB collection utilizing dense semantic embeddings over 35 synthetic loan entries, with an in-memory TF-IDF fallback explicitly labelled as `test_tfidf_fallback`.
+- **FAQ Retrieval & Grounding**: Real ChromaDB collection utilizing dense semantic embeddings over 35 synthetic loan entries, with an in-memory TF-IDF fallback explicitly labelled as `test_tfidf_fallback`. Generation uses deterministic `MockLLMClient` by default in CI/local tests, and `verify_grounding` flags responses below a `0.35` (35%) token-overlap threshold.
 - **Channel Security & Secret Sanitation**:
   - The trusted channel strictly mandates a server-validated Bearer token (`Authorization: Bearer <token>`) validated with `hmac.compare_digest` against `TRUSTED_CHANNEL_SECRET`.
   - Unauthenticated requests, spoofed headers, and requests when the secret is unset in the environment are rejected with HTTP 401.
@@ -28,7 +28,7 @@ TrustDesk is a loan-FAQ conversational assistant built on synthetic data, design
   - Runs on the already-masked text before forwarding to tools or models.
   - *Heuristic Screening Notice*: Uses regular expression heuristic screening for prompt overrides and delimiter attacks. Inquisitive or testing queries asking for internal instructions are intentionally refused to prioritize safety over permissive interpretation.
   - *Refinement Notice*: Routing rules and injection patterns were refined after observing failures on earlier test rounds.
-  - *Historical Evaluation ($N=5$ attacks, $N=5$ benign)*: In the original historical round prior to subsequent adjustments, 3/5 attacks were caught (60.0%) with 0/5 benign false positives (0.0%). Typo and Hindi-English (Hinglish) variants evade the heuristic screening.
+  - *Historical Evaluation (N=5 attacks, N=5 benign)*: In the original historical round prior to subsequent adjustments, 3/5 attacks were caught (60.0%) with 0/5 benign false positives (0.0%). Typo and Hindi-English (Hinglish) variants evade the heuristic screening.
 - **Out-of-Scope Query Refusal & Redirection**:
   - Out-of-scope non-loan queries (weather, cryptocurrency, humor, programming, sports, trivia, and conversational greetings) or queries lacking financial loan context are routed to `fallback`.
   - The system returns an explicit refusal and redirection response:
@@ -57,24 +57,24 @@ TrustDesk is a loan-FAQ conversational assistant built on synthetic data, design
 
 ## Machine Learning Intent Classifier Benchmark
 
-Evaluated on a balanced synthetic dataset of 120 queries across 4 classes (`faq`, `emi_calculation`, `eligibility_check`, `fallback`). Train/test split was dynamically computed ($N_{\text{train}} = 90$, $N_{\text{test}} = 30$). No arbitrary accuracy claims are made; performance is benchmarked strictly against dual keyword baselines on the exact same test split.
+Evaluated on a balanced synthetic dataset of 120 queries across 4 classes (`faq`, `emi_calculation`, `eligibility_check`, `fallback`). Train/test split was dynamically computed (`N_train = 90`, `N_test = 30`). No arbitrary accuracy claims are made; performance is benchmarked strictly against dual keyword baselines on the exact same test split.
 
-| Model / Pipeline | Dataset Type | $N_{\text{test}}$ | Macro F1 | Performance Context |
+| Model / Pipeline | Dataset Type | N_test | Macro F1 | Performance Context |
 | :--- | :--- | :--- | :--- | :--- |
 | **ML (`TfidfVectorizer` + `LogisticRegression`)** | **Synthetic** | **30** | **0.9661** | Statistical text classifier |
 | Enhanced Keyword / Regex Baseline | Synthetic | 30 | 0.8982 | Multi-token rule matching |
 | Simple Keyword Baseline | Synthetic | 30 | 0.6099 | Single token exact matching |
 
-### Per-Class Metrics ($N_{\text{test}} = 30$)
+### Per-Class Metrics (N_test = 30)
 
-| Class | Precision | Recall | F1-Score | Support ($N_{\text{test}}$) |
+| Class | Precision | Recall | F1-Score | Support (N_test) |
 | :--- | :--- | :--- | :--- | :--- |
 | `eligibility_check` | 1.0000 | 1.0000 | 1.0000 | 8 |
 | `emi_calculation` | 1.0000 | 1.0000 | 1.0000 | 7 |
 | `fallback` | 0.8889 | 1.0000 | 0.9412 | 8 |
 | `faq` | 1.0000 | 0.8571 | 0.9231 | 7 |
 
-### Confusion Matrix ($N_{\text{test}} = 30$)
+### Confusion Matrix (N_test = 30)
 
 ```
 Labels: ['eligibility_check', 'emi_calculation', 'fallback', 'faq']
@@ -91,7 +91,7 @@ Matrix:
 
 The 40-question golden set serves as a regression suite (passes 40/40 after fixes). Evaluated across 5 core categories with split reporting for zero-key deterministic runs (`[Eval - Mock LLM]`) and live models (`[Eval - Live LLM]`). Routing rules and fallbacks were iteratively refined after observing initial test failures (where Fallback was initially 20% and Eligibility 80%).
 
-| Category | Questions ($N$) | Before Routing Fix Pass Rate | After Routing Fix Pass Rate | Average Grounding Score |
+| Category | Questions (N) | Before Routing Fix Pass Rate | After Routing Fix Pass Rate | Average Grounding Score |
 | :--- | :--- | :--- | :--- | :--- |
 | **Grounded FAQs** | 20 | 100.0% (20/20) | **100.0% (20/20)** | 0.9869 |
 | **Applicant Eligibility** | 5 | 80.0% (4/5) | **100.0% (5/5)** | 1.0000 |
@@ -123,33 +123,33 @@ Diagnostic Stress Suite Concordance: **100.0% (10/10)**, Injections Intercepted:
 
 ---
 
-## 12-Query Development Diagnostic Set ($N=12$)
+## 12-Query Development Diagnostic Set (N=12)
 
-The 12 queries served as a **development diagnostic set** to evaluate the offline performance of three distinct routing mechanisms without initial tuning: the Rule-Based Router, the ML Intent Classifier (`TfidfVectorizer` + `LogisticRegression`), and a dense Chroma-Similarity Gate ($d \le 1.25$ selected strictly on the training data). The router was subsequently modified after observing its failures on this set and the 20-query development suite:
+The 12 queries served as a **development diagnostic set** to evaluate the offline performance of three distinct routing mechanisms without initial tuning: the Rule-Based Router, the ML Intent Classifier (`TfidfVectorizer` + `LogisticRegression`), and a dense Chroma-Similarity Gate (`d <= 1.25` selected strictly on the training data). The router was subsequently modified after observing its failures on this set and the 20-query development suite:
 
-| ID | Expected Category | Rule-Based Router | ML Intent Classifier | Dense Chroma Gate ($d \le 1.25$) |
+| ID | Expected Category | Rule-Based Router | ML Intent Classifier | Dense Chroma Gate (d <= 1.25) |
 | :--- | :--- | :--- | :--- | :--- |
-| `indep-ood-01` | `fallback` | `faq` (Fail) | `faq` (Conf 0.35) (Fail) | `fallback` ($d=1.38$) (Pass) |
-| `indep-ood-02` | `fallback` | `faq` (Fail) | `faq` (Conf 0.31) (Fail) | `fallback` ($d=1.58$) (Pass) |
-| `indep-ood-03` | `fallback` | `fallback` (Pass) | `eligibility_check` (Conf 0.30) (Fail) | `fallback` ($d=1.33$) (Pass) |
-| `indep-ood-04` | `fallback` | `fallback` (Pass) | `fallback` (Conf 0.36) (Pass) | `fallback` ($d=1.35$) (Pass) |
-| `indep-ood-05` | `fallback` | `fallback` (Pass) | `faq` (Conf 0.29) (Fail) | `fallback` ($d=1.52$) (Pass) |
-| `indep-ood-06` | `fallback` | `fallback` (Pass) | `faq` (Conf 0.31) (Fail) | `fallback` ($d=1.40$) (Pass) |
-| `indep-ind-01` | `faq` | `fallback` (Fail) | `fallback` (Conf 0.36) (Fail) | `faq` ($d=1.25$) (Pass) |
-| `indep-ind-02` | `faq` | `fallback` (Fail) | `faq` (Conf 0.35) (Pass) | `fallback` ($d=1.32$) (Fail) |
-| `indep-ind-03` | `eligibility_check` | `fallback` (Fail) | `eligibility_check` (Conf 0.29) (Pass) | `fallback` ($d=1.27$) (Fail) |
-| `indep-ind-04` | `faq` | `fallback` (Fail) | `emi_calculation` (Conf 0.30) (Fail) | `faq` ($d=1.15$) (Pass) |
-| `indep-ind-05` | `faq` | `fallback` (Fail) | `fallback` (Conf 0.29) (Fail) | `fallback` ($d=1.29$) (Fail) |
-| `indep-ind-06` | `emi_calculation` | `fallback` (Fail) | `emi_calculation` (Conf 0.44) (Pass) | `fallback` ($d=1.27$) (Fail) |
+| `indep-ood-01` | `fallback` | `faq` (Fail) | `faq` (Conf 0.35) (Fail) | `fallback` (`d=1.38`) (Pass) |
+| `indep-ood-02` | `fallback` | `faq` (Fail) | `faq` (Conf 0.31) (Fail) | `fallback` (`d=1.58`) (Pass) |
+| `indep-ood-03` | `fallback` | `fallback` (Pass) | `eligibility_check` (Conf 0.30) (Fail) | `fallback` (`d=1.33`) (Pass) |
+| `indep-ood-04` | `fallback` | `fallback` (Pass) | `fallback` (Conf 0.36) (Pass) | `fallback` (`d=1.35`) (Pass) |
+| `indep-ood-05` | `fallback` | `fallback` (Pass) | `faq` (Conf 0.29) (Fail) | `fallback` (`d=1.52`) (Pass) |
+| `indep-ood-06` | `fallback` | `fallback` (Pass) | `faq` (Conf 0.31) (Fail) | `fallback` (`d=1.40`) (Pass) |
+| `indep-ind-01` | `faq` | `fallback` (Fail) | `fallback` (Conf 0.36) (Fail) | `faq` (`d=1.25`) (Pass) |
+| `indep-ind-02` | `faq` | `fallback` (Fail) | `faq` (Conf 0.35) (Pass) | `fallback` (`d=1.32`) (Fail) |
+| `indep-ind-03` | `eligibility_check` | `fallback` (Fail) | `eligibility_check` (Conf 0.29) (Pass) | `fallback` (`d=1.27`) (Fail) |
+| `indep-ind-04` | `faq` | `fallback` (Fail) | `emi_calculation` (Conf 0.30) (Fail) | `faq` (`d=1.15`) (Pass) |
+| `indep-ind-05` | `faq` | `fallback` (Fail) | `fallback` (Conf 0.29) (Fail) | `fallback` (`d=1.29`) (Fail) |
+| `indep-ind-06` | `emi_calculation` | `fallback` (Fail) | `emi_calculation` (Conf 0.44) (Pass) | `fallback` (`d=1.27`) (Fail) |
 
-### Side-by-Side Router Concordance ($N=12$)
+### Side-by-Side Router Concordance (N=12)
 - **Rule-Based Router**: **4/12 (33.3%)**. Out-of-scope 4/6 (false positives on `'rate'` and `'charg'`); in-domain zero-keyword 0/6 (fails silently to fallback).
 - **ML Intent Classifier**: **4/12 (33.3%)**. Accurately captured 3 in-domain and 1 out-of-scope query, but exhibits near-uniform uncertainty (confidences between 0.29 and 0.44) on zero-keyword phrasing.
-- **Dense Chroma Gate ($d \le 1.25$)**: **8/12 (66.7%)**. Out-of-scope refusal was **6/6 (100.0%)** because non-loan banking queries are geometrically distant ($d \ge 1.33$) in dense embedding space; missed non-FAQ tools because only FAQs are indexed in Chroma.
+- **Dense Chroma Gate (`d <= 1.25`)**: **8/12 (66.7%)**. Out-of-scope refusal was **6/6 (100.0%)** because non-loan banking queries are geometrically distant (`d >= 1.33`) in dense embedding space; missed non-FAQ tools because only FAQs are indexed in Chroma.
 
 ---
 
-## 20-Query Development Set ($N=20$) - Before vs. After Hybrid Router
+## 20-Query Development Set (N=20) - Before vs. After Hybrid Router
 
 BEFORE implementing the hybrid router, 20 queries were authored across 4 categories (5 Hinglish, 5 Typo, 5 Zero-Keyword In-Domain, and 5 Borderline Out-of-Scope) to serve as a **development set**. The router architecture, regex patterns, and distance thresholds were iteratively refined after observing their initial failures on this benchmark.
 
@@ -158,15 +158,15 @@ BEFORE implementing the hybrid router, 20 queries were authored across 4 categor
 2. **Refined Out-of-Scope Code Regex**: Removed bare `software` from general refusal rules, replacing it with coding-specific tokens (`coding`, `programming`, `algorithm`, `html`, `css`, `python`, `javascript`). This ensures applicant professions such as "software developer" (`new-20-14`) are not falsely rejected as programming queries.
 3. **Missed Payment FAQ Guard**: Added `is_missed_payment` detection (`missed|bounce|late|penalty`) so queries regarding consequences of missing an EMI installment route to FAQ policy guidance instead of triggering the numeric EMI calculator.
 4. **Typo & Hindi Denomination Stems**: Added flexible stem patterns (`calc[a-z]*`, `inst[a-z]*`, `elig[a-z]*`, `elgb[a-z]*`, `qualif[a-z]*`) and Hindi currency words (`lakh`, `crore`, `hazar`).
-5. **Chroma Distance Threshold Shift ($d \le 1.25 \rightarrow d \le 1.28$)**:
-   - On synthetic training data: FAQs had nearest-neighbor distance $d \le 1.1878$ (median 0.47), whereas training fallback questions had $d \ge 1.4097$.
-   - On development queries: Legitimate in-domain inquiries using real-estate vocabulary without standard loan keywords (e.g., `new-20-11`: *"Does your platform offer financial assistance for purchasing agricultural farmland in MP?"*) yielded a nearest FAQ distance of $d = 1.274$, falling just outside the rigid 1.25 cutoff.
-   - Adjusting the boundary to $d \le 1.28$ admits farmland and plot inquiries into FAQ routing while preserving 100% rejection on non-loan financial queries, all of which remain safely separated at $d \ge 1.33$.
+5. **Chroma Distance Threshold Shift (`d <= 1.25 -> d <= 1.28`)**:
+   - On synthetic training data: FAQs had nearest-neighbor distance `d <= 1.1878` (median 0.47), whereas training fallback questions had `d >= 1.4097`.
+   - On development queries: Legitimate in-domain inquiries using real-estate vocabulary without standard loan keywords (e.g., `new-20-11`: *"Does your platform offer financial assistance for purchasing agricultural farmland in MP?"*) yielded a nearest FAQ distance of `d = 1.274`, falling just outside the rigid 1.25 cutoff.
+   - Adjusting the boundary to `d <= 1.28` admits farmland and plot inquiries into FAQ routing while preserving 100% rejection on non-loan financial queries, all of which remain safely separated at `d >= 1.33`.
 
 ### Rule Match Confidence Representation
 Deterministic keyword and regex fast-path matches return `"rule_match"` rather than a numerical float like `1.0` or `100%`. Fast-path pattern hits are deterministic checks rather than calibrated posterior probabilities.
 
-### Development Set Results ($N=20$)
+### Development Set Results (N=20)
 
 Evaluating the 20 queries on the original Rule-Based Router yielded **9/20 (45.0%)** with severe misroutes (e.g. fixed deposit premature withdrawal routed to FAQ, Form 15G routed to eligibility check).
 
@@ -195,17 +195,17 @@ After implementing the **Hybrid Intent Router** (combining rule fast path for ex
 | `new-20-19` | Borderline Out-of-Scope | *"How do I submit Form 15G or 15H to avoid TDS deduction on interest income?"* | `fallback` | `eligibility_check` (Fail) | `fallback` (Conf 0.95) | Pass |
 | `new-20-20` | Borderline Out-of-Scope | *"What is the daily transaction limit for international wire transfers via SWIFT?"* | `fallback` | `fallback` | `fallback` (Conf 0.95) | Pass |
 
-### Summary Comparison ($N=20$)
+### Summary Comparison (N=20)
 - **Before (Rule-Based Router)**: **9/20 passed (45.0%)**. 11 queries failed due to keyword blindness or substring false positives.
 - **After (Hybrid Intent Router)**: **17 direct, 3 clarifying, 0 misrouted** (17/20 direct matches, 3/20 interactive clarifications, 0 erroneous misroutes).
 
 ---
 
-## Blind set ($N=15$, router frozen at `3eebf52`)
+## Held-out routing set (N=15, authored for evaluation on router frozen at `3eebf52`)
 
-A held-out suite of 15 queries evaluated once on the frozen hybrid router without any post-hoc tuning.
+A held-out suite of 15 author-written queries evaluated once on the frozen hybrid router without any post-hoc tuning (`MockLLMClient`).
 
-### Results Summary ($N=15$)
+### Results Summary (N=15)
 - **Pass**: **9 / 15 (60.0%)** (correct intent routed to tool or fallback)
 - **Clarify**: **4 / 15 (26.7%)** (low-confidence ambiguous queries prompted for clarification)
 - **False Refusal**: **2 / 15 (13.3%)** (in-domain queries falsely routed to fallback)
@@ -235,7 +235,7 @@ A held-out suite of 15 queries evaluated once on the frozen hybrid router withou
 
 1. **`blind-15-01`**: *"Mujhe shaadi ke liye paise udhaar chahiye, kitna byaaj lagega?"*
    - **Route**: `fallback` via `classifier_retrieval_hybrid` (Conf 0.70) -> **False Refusal**
-   - **Root Cause**: The query uses pure Hindi vernacular loan vocabulary (*"udhaar"* = loan/borrow, *"byaaj"* = interest) without English loan keywords. The ML classifier yielded uniform uncertainty and Chroma distance exceeded $1.28$, dropping to fallback.
+   - **Root Cause**: The query uses pure Hindi vernacular loan vocabulary (*"udhaar"* = loan/borrow, *"byaaj"* = interest) without English loan keywords. The ML classifier yielded uniform uncertainty and Chroma distance exceeded `1.28`, dropping to fallback.
    - **Future Improvement Only**: Expand Hindi vocabulary stems in training and fast-path lexicons for *"udhaar"* and *"byaaj"*.
 
 2. **`blind-15-13`**: *"Meri CIBIL score 680 hai, kya iska loan par asar padega?"*
@@ -251,6 +251,13 @@ All applicant eligibility thresholds are synthetic and invented for demonstratio
 - Applicant age range: 21 to 60 years.
 - Minimum monthly salary: INR 25,000.
 - Fixed Obligation to Income Ratio (FOIR) cutoff: 50%.
+
+---
+
+## Automated Test Verification
+
+- **GitHub Actions CI (`TrustDesk CI`, Python 3.11):** Runs `pytest -m "not integration" -v` (**74 unit tests**), `pytest -m "integration" -v` (**2 integration tests** against live `redis:7-alpine` and `postgres:16-alpine` service containers), and a `docker compose up -d --build` smoke test.
+- **Frontend Tests (Local):** `cd frontend && npx vitest run` executes **16 Vitest component & accessibility tests** across 4 test files.
 
 ---
 
