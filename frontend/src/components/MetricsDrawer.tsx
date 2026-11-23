@@ -23,7 +23,7 @@ export const MetricsDrawer: React.FC<MetricsDrawerProps> = ({ isOpen, onClose })
 
       if (mRes.ok) {
         const mData = await mRes.json();
-        setMetrics(mData);
+        setMetrics(mData.metrics ?? mData);
       }
       if (hRes.ok) {
         const hData = await hRes.json();
